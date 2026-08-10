@@ -1,0 +1,34 @@
+# .dockerignore
+
+# proyectos de testing - no hacen falta para buildear la API
+SRM.UnitTests/
+SRM.IntegrationTests/
+
+# build artifacts - se generan de nuevo dentro del container,
+# copiar los tuyos locales solo generaría conflictos/basura
+**/bin/
+**/obj/
+
+# control de versiones y editor
+.git/
+.gitignore
+.vs/
+.vscode/
+.idea/
+*.user
+
+# secretos y config local - NUNCA deben terminar en la imagen
+# (NO USAMOS SECRETOS EN APPSETTINGS)
+#**/.env
+#**/appsettings.Development.json
+#**/appsettings.*.json
+#!**/appsettings.json
+
+# docker mismo (no hace falta que la imagen se copie a sí misma)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# archivos de SO / temporales
+**/*.DS_Store
+**/Thumbs.db
