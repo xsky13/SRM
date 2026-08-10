@@ -2,17 +2,14 @@
 
 ## Estructura api
 
-/Config 	    	-> archivos de configuracion
+* /Config
+* /Controllers 
+* /Data	
 
-/Controllers 	  -> controladores
+  * /Migrations	 
+* /Services 		 
 
-/Data          	-> todo con relacion a la base de datos
-
-  /Migrations   -> migraciones
-
-/Services 		  -> interfaces de servicios
-
-  /Impl 	      -> implementaciones de las interfaces
+  * /Impl		 
 
 ## Dependecias
 
