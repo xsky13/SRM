@@ -4,6 +4,7 @@
 *.user
 *.suo
 .zed/
+.github/
 
 .DS_Store
 Thumbs.db
