@@ -4,15 +4,15 @@
 
 /Config 	    	-> archivos de configuracion
 
-/Controllers 	    -> controladores
+/Controllers 	  -> controladores
 
-/Data          	    -> todo con relacion a la base de datos
+/Data          	-> todo con relacion a la base de datos
 
-&#x09;/Migrations   -> migraciones
+  /Migrations   -> migraciones
 
-/Services 		    -> interfaces de servicios
+/Services 		  -> interfaces de servicios
 
-&#x09;/Impl 	    -> implementaciones de las interfaces
+  /Impl 	      -> implementaciones de las interfaces
 
 ## Dependecias
 
