@@ -1,0 +1,15 @@
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+.zed/
+
+.DS_Store
+Thumbs.db
+
+.env
+!.env.example
+
+**/bin/
+**/obj/

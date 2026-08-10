@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SRM.Api/SRM.Api.csproj" />
+  <Project Path="SRM.IntegrationTests/SRM.IntegrationTests.csproj" />
+  <Project Path="SRM.UnitTests/SRM.UnitTests.csproj" />
+</Solution>
