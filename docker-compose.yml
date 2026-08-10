@@ -8,6 +8,9 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ApiSettings__Issuer=${ISSUER}
+      - ApiSettings__Audience=${AUDIENCE}
+      - Jwt__Key=${SECRET_KEY}
       - ConnectionStrings__DatabaseConnectionString=Host=postgres;username=${POSTGRES_USER};password=${POSTGRES_PASSWORD};database=${POSTGRES_DB};
     depends_on:
       postgres:
