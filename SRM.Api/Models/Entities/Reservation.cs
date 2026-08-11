@@ -15,9 +15,9 @@ namespace SRM.Api.Models.Entities
         public DateTime? DeletedOnUTC { get; set; }
 
         public int ApartamentId { get; set; }
-        public Apartment Apartment { get; set; }
+        public Apartment Apartment { get; set; } = null!;
 
         public int AppUserId { get; set; }
-        public AppUser AppUser { get; set; }
+        public AppUser AppUser { get; set; } = null!;
     }
 }

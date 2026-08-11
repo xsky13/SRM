@@ -5,10 +5,10 @@ namespace SRM.Api.Models.Entities
     public class AppUser : ISoftDeleteable 
     {
         public Guid Id { get; set; }
-        public string Name { get; set; }
-        public string  LastName { get; set; }
-        public string Email  { get; set; }
-        public string Telefono { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string  LastName { get; set; } = string.Empty;
+        public string Email  { get; set; } = string.Empty;
+        public string Telefono { get; set; } = string.Empty;
         public string? PwdHash { get; set; }
         public UserType Usertype { get; set; }
 
