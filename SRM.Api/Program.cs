@@ -3,11 +3,22 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Serilog;
 using SRM.Api;
 using SRM.Api.Data;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, config) =>
+{
+    config
+        .MinimumLevel.Is(context.HostingEnvironment.IsDevelopment()
+            ? Serilog.Events.LogEventLevel.Debug
+            : Serilog.Events.LogEventLevel.Information)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+});
 
 var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?.Split(',')
     ?? new[] { "http://localhost:3000" };
@@ -95,6 +106,8 @@ hc.AddCheck(
 );
 
 var app = builder.Build();
+
+app.UseSerilogRequestLogging(); // logging
 
 // AGREGA LAS MIGRACIONES EN EL CONTAINER DOCKER
 using (var scope = app.Services.CreateScope())
