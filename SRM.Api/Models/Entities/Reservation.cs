@@ -14,10 +14,12 @@ namespace SRM.Api.Models.Entities
         public bool IsDeleted { get; set; }
         public DateTime? DeletedOnUTC { get; set; }
 
-        public int ApartamentId { get; set; }
+        public Guid ApartmentId { get; set; }
         public Apartment Apartment { get; set; } = null!;
 
-        public int AppUserId { get; set; }
+        public Guid AppUserId { get; set; }
         public AppUser AppUser { get; set; } = null!;
+
+        public List<Payment> Payments { get; set; }
     }
 }

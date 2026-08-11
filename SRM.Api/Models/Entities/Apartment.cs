@@ -9,5 +9,7 @@
         public string Location { get; set; } = string.Empty;
         public bool IsDeleted { get; set; }
         public DateTime? DeletedOnUTC { get; set; }
+        public List<Image> Images { get; set; } = [];
+        public List<Reservation> Reservations { get; set; } = [];
     }
 }
