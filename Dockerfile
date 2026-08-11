@@ -18,6 +18,9 @@ RUN apt-get update \
 	&& apt-get install -y --no-install-recommends curl \
 	&& rm -rf /var/lib/apt/lists/*
 
+# darle permisos a los logs de crear archivos
+RUN mkdir -p /app/logs && chown -R app:app /app/logs
+
 # switch back to normal user
 USER app
 

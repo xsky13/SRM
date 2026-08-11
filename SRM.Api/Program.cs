@@ -113,7 +113,14 @@ hc.AddCheck(
 
 var app = builder.Build();
 
-app.UseSerilogRequestLogging(); // logging
+ // logging, esconder requests a /health
+app.UseSerilogRequestLogging(options =>
+{
+    options.GetLevel = (httpContext, elapsed, ex) =>
+        httpContext.Request.Path.StartsWithSegments("/health")
+            ? Serilog.Events.LogEventLevel.Verbose  // lo baja a un nivel que normalmente no se muestra/guarda
+            : Serilog.Events.LogEventLevel.Information;
+});
 
 // AGREGA LAS MIGRACIONES EN EL CONTAINER DOCKER
 using (var scope = app.Services.CreateScope())
