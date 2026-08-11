@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SRM.Api.Models
+﻿namespace SRM.Api.Models.Entities
 {
-    internal class Apartament : ISoftDeleteable
+    public class Apartment : ISoftDeleteable
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         public float Price { get; set; }
         public string Location { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedOnUTC { get; set; }
-
     }
 }

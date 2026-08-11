@@ -3,13 +3,13 @@
 ## Estructura api
 
 * /Config
-* /Controllers 
-* /Data	
+* /Controllers
+* /Data
 
-  * /Migrations	 
-* /Services 		 
+  * /Migrations
+* /Services
 
-  * /Impl		 
+  * /Impl
 
 ## Dependecias
 
@@ -24,4 +24,8 @@
 ## Auth
 
 Se usa el metodo de access tokens y refresh tokens con la libreria de JWT. Se retorna usando httpOnly cookies. El request a un endpoint con autorizacion debe tener el campo de 'X-Access-Token'.
+
+## Miscellaneous for now
+
+One ticket per NON-MANUAL only payment.
 
