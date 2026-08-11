@@ -2,7 +2,7 @@
 
 namespace SRM.Api.Models.Entities
 {
-    public class AppUser : ISoftDeleteable 
+    public class AppUser : ISoftDeletable 
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
