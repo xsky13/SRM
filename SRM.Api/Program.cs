@@ -17,7 +17,13 @@ builder.Host.UseSerilog((context, config) =>
             ? Serilog.Events.LogEventLevel.Debug
             : Serilog.Events.LogEventLevel.Information)
         .Enrich.FromLogContext()
-        .WriteTo.Console();
+        .WriteTo.Console()
+        .WriteTo.File(
+            "/app/logs/log-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,           // solo guarda los ultimos 30 días. borra el resto
+            fileSizeLimitBytes: 50_000_000,       // 50 MB por si un día explota de logs
+            rollOnFileSizeLimit: true);           // si supera el límite de tamaño en el mismo día, arranca otro archivo
 });
 
 var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?.Split(',')

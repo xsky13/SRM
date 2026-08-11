@@ -6,6 +6,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5000:8080"
+    volumes:
+      - api_logs:/app/logs
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ApiSettings__Issuer=${ISSUER}
@@ -35,3 +37,4 @@ services:
 
 volumes:
  postgres_data:
+ api_logs:
