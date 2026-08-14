@@ -113,6 +113,8 @@ hc.AddCheck(
 
 var app = builder.Build();
 
+app.UseCors();
+
  // logging, esconder requests a /health
 app.UseSerilogRequestLogging(options =>
 {
