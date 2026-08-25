@@ -6,6 +6,6 @@ namespace SRM.Api.Services
 {
     public interface IApartmentService
     {
-        Task<Result<ApartmentDto[]>> GetAll(int limit = 10);
+        Task<Result<List<ApartmentDto>>> GetAll(int limit = 10);
     }
 }
