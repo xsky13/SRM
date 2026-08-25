@@ -6,6 +6,8 @@ using Microsoft.OpenApi;
 using Serilog;
 using SRM.Api;
 using SRM.Api.Data;
+using SRM.Api.Services;
+using SRM.Api.Services.Impl;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +52,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton<SoftDeleteInterceptor>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+builder.Services.AddScoped<IApartmentService, ApartmentServiceImpl>();
+
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen(options =>
 {
