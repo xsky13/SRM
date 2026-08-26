@@ -18,6 +18,8 @@ namespace SRM.Api.Repositories
                     a.Description,
                     a.Price,
                     a.Location,
+                    a.Latitude,
+                    a.Longitude,
                     a.Images.Select(i => new Models.Dto.Images.ImageDto(
                         i.Id, 
                         i.Url, 

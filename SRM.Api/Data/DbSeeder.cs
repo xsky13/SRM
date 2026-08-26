@@ -8,9 +8,7 @@ namespace SRM.Api.Data
         public static async Task SeedAsync(AppDbContext context)
         {
             if (await context.Apartments.AnyAsync())
-            {
                 return; // ya hay datos, no hacemos nada
-            }
 
             var apartments = new List<Apartment>
             {
@@ -19,12 +17,16 @@ namespace SRM.Api.Data
                     Description = "Lorem ipsum dolor sit amet.",
                     Price = 40000F,
                     Location = "Libertador San Martin",
+                    Latitude = 0,
+                    Longitude = 0,
                     IsDeleted = false,
                 },
                 new() {
                     Name = "Depto Superior",
                     Description = "Lorem ipsum dolor sit amet.",
                     Price = 40000F,
+                    Latitude = 0,
+                    Longitude = 0,
                     Location = "Libertador San Martin",
                     IsDeleted = false,
                 },
