@@ -132,6 +132,14 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images"
 });
 
+var containerImagesPath = Path.Combine(builder.Environment.ContentRootPath, "Storage", "Images");
+var seedImagesPath = Path.Combine(builder.Environment.ContentRootPath, "SeedData", "Images");
+
+//if (app.Environment.IsDevelopment())
+//{
+    ImageSeeder.SeedImages(seedImagesPath, containerImagesPath); // just do it. nike
+//}
+
 app.UseCors();
 
  // logging, esconder requests a /health

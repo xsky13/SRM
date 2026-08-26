@@ -19,7 +19,7 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 # darle permisos a los logs de crear archivos
-RUN mkdir -p /app/logs && chown -R app:app /app/logs
+RUN mkdir -p /app/logs /app/Storage/Images && chown -R app:app /app/logs
 
 # switch back to normal user
 USER app
@@ -48,6 +48,7 @@ RUN dotnet publish "./SRM.Api/SRM.Api.csproj" -c Release -o /app/publish /p:UseA
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY --from=publish /src/SeedData /app/SeedData
 ENTRYPOINT ["dotnet", "SRM.Api.dll"]
 
 
