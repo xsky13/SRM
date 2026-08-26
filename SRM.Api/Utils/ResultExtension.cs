@@ -9,7 +9,7 @@ namespace SRM.Api.Utils
             if (result.Success)
                 return new OkObjectResult(result.Value);
 
-            return new ObjectResult(new { error = result.Error, field = result.Field }) { StatusCode = result.StatusCode };
+            return new ObjectResult(new { error = result.Error }) { StatusCode = result.StatusCode };
         }
     }
 }
