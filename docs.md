@@ -31,3 +31,7 @@ Se usa el metodo de access tokens y refresh tokens con la libreria de JWT. Se re
 * In each delete service method, also delete all their depending entities
 * Usar .IgnoreQueryFilters() en las querys donde tenemos que buscar entidades que pueden tener padres eliminados. Esto seria el caso de los pagos y tickets, en los cuales nunca se aplica soft delete. Al usar este metodo, se ignore el filtro de IsDeleted y se pueden conseguir las entidades padres que estan eliminadas (para mostrar quien sabe que datos necesitabamos para renderizar)
 
+## Docker
+
+* Image seeding process: first mount the contents of /SeedData/Images into /app/SeedData (give permissions also). Then Program.cs runs the image seeder, which copies the contents of /app/SeedData/Images to /Storage/Images, because we already have a static file provider on /Storage/Images, which translates to /images in the api.  
+

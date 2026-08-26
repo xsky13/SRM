@@ -19,7 +19,7 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 # darle permisos a los logs de crear archivos
-RUN mkdir -p /app/logs /app/Storage/Images && chown -R app:app /app/logs
+RUN mkdir -p /app/logs /app/Storage/Images && chown -R app:app /app/logs && chown -R app:app /app/Storage/Images
 
 # switch back to normal user
 USER app
