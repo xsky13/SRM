@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
@@ -121,6 +122,15 @@ hc.AddCheck(
 );
 
 var app = builder.Build();
+
+var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "Storage", "Images");
+Directory.CreateDirectory(imagesPath); // crear por las dudas
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imagesPath),
+    RequestPath = "/images"
+});
 
 app.UseCors();
 

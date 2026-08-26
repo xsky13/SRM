@@ -37,6 +37,7 @@ namespace SRM.Api.Repositories
                 .Select(apartment => new ApartmentListingDto(
                     apartment.Id,
                     apartment.Name,
+                    apartment.CoverImgUrl,
                     apartment.Description,
                     apartment.Price
                 ))
