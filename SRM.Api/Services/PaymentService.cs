@@ -1,7 +1,8 @@
 ﻿using MercadoPago.Client.Preference;
 using MercadoPago.Resource.Preference;
+using SRM.Api.Services.Interfaces;
 
-namespace SRM.Api.Services.Interfaces
+namespace SRM.Api.Services
 {
     public class PaymentService : IPaymentService
     {
