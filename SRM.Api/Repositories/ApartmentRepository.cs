@@ -38,7 +38,7 @@ namespace SRM.Api.Repositories
                     apartment.Id,
                     apartment.Name,
                     apartment.CoverImgUrl,
-                    apartment.Description,
+                    apartment.Location,
                     apartment.Price
                 ))
                 .Take(limit)

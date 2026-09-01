@@ -4,7 +4,7 @@
         Guid Id,
         string Name,
         string CoverImgUrl,
-        string Description,
+        string Location,
         float Price
     );
 }
