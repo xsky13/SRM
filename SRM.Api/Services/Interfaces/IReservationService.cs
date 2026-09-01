@@ -7,9 +7,9 @@ using System.Text;
 
 namespace SRM.Api.Services.Interfaces
 {
-    internal interface IResrervationService
+    internal interface IReservationService
     {
-        Task<Result<List<ReservationListingDto>>> GetAll();
+        Task<Result<List<ReservationListingDto>>> GetAll(Guid apartmentId);
 
         Task<Result<ReservationDetailDto>> GetById(Guid id);
     }
