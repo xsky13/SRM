@@ -60,6 +60,9 @@ builder.Services.AddScoped<IApartmentService, ApartmentService>();
 
 builder.Services.AddScoped<IApartmentRepository, ApartmentRepository>();
 
+//agregar servicios de Repositorio.
+
+
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen(options =>
 {
