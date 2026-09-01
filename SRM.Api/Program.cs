@@ -1,3 +1,4 @@
+using MercadoPago.Config;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -12,6 +13,8 @@ using SRM.Api.Repositories.Interfaces;
 using SRM.Api.Services;
 using SRM.Api.Services.Interfaces;
 using System.Text;
+
+MercadoPagoConfig.AccessToken = "TEST-8757392314054936-090112-0d1fdd0e5bd154c70da6c8ef04f75e85-1623332253";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +60,7 @@ builder.Services.AddSingleton<SoftDeleteInterceptor>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IApartmentRepository, ApartmentRepository>();
 
