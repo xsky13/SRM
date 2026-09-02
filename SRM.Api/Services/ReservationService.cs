@@ -16,13 +16,13 @@ namespace SRM.Api.Services
 {
     internal class ReservationService(AppDbContext _db) : I
     {
-        public async Task<Result<ReservationListingDto>> GetByReservationId(Guid reservationId) {
+        public async Task<Result<ReservationDetailDto>> GetByReservationId(Guid reservationId) {
 
 
 
             var reservation = await _db.Reservations
                 .AsNoTracking()
-                .Where(async r => r.Id == reservationId)
+                .Where(r => r.Id == reservationId)
                 .Select(r => new ReservationDetailDto(
                     r.Id,
                     r.CheckInDate,
@@ -31,24 +31,24 @@ namespace SRM.Api.Services
                 ))
                 .FirstOrDefaultAsync();
 
-            return Result<List<ApartmentListingDto>>.Ok(reservation);
+            return Result<List<ReservationDetailDto>>.Ok(reservation);
             
         }
 
-        public async Task<Result<ReservationDetailDto>> GetByApartmentId(Guid id)
+        public async Task<Result<ReservationListingDto>> GetByApartmentId(Guid id)
         {
             var reservations = await _db.Reservations
             .AsNoTracking()
-            .Where(async r => r.ApartmentId == apartmentId)
+            .Where(r => r.ApartmentId == apartmentId)
             .Select(r => new ReservationListingDto(
                 r.Id,
                 r.CheckInDate,
                 r.CheckOutDate,
                 r.ApartmentId
-                ))
-               .ToListasync();
+            ))
+            .ToListAsync();
 
-            return Result<List<ReservationDetailDto>>.Ok(reservations);
+            return Result<List<ReservationListingDto>>.Ok(reservations);
 
         }
     }
