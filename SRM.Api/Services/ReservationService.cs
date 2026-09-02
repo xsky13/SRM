@@ -1,4 +1,5 @@
-﻿using SRM.Api.Models.Dto.Apartment;
+﻿using SRM.Api.Data;
+using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Entities;
 using SRM.Api.Repositories.Interfaces;
@@ -13,37 +14,41 @@ using System.Text;
 
 namespace SRM.Api.Services
 {
-    internal class ReservationService(IReservationRespository reservationRespository) : IReservationService 
+    internal class ReservationService(AppDbContext _db) : I
     {
-        public async Task<Result<ReservationListingDto>> GetAll(Guid apartmentId) {
+        public async Task<Result<ReservationListingDto>> GetByReservationId(Guid reservationId) {
 
 
-            ;
-            if (apartmentService.GetById(apartmentId) == null)
-            {
-                return Result<List<ReservationListingDto>>.Fail("No se encontró el departamento", 404);
-            }
-            else
-            {
 
-                var reservations = await reservationRespository.GetAll(apartmentId);
-                if (reservations == null)
-                {
-                    return Result<List<ReservationListingDto>>.Fail("No se encontraron reservaciones", 404);
-                }
+            var reservation = await _db.Reservations
+                .AsNoTracking()
+                .Where(async r => r.Id == reservationId)
+                .Select(r => new ReservationDetailDto(
+                    r.Id,
+                    r.CheckInDate,
+                    r.CheckOutDate,
+                    r.ApartmentId
+                ))
+                .FirstOrDefaultAsync();
 
-                return Result<List<ApartmentListingDto>>.Ok(reservations);
-            }
+            return Result<List<ApartmentListingDto>>.Ok(reservation);
+            
         }
 
-        public async Task<Result<ReservationDetailDto>> GetById(Guid id)
+        public async Task<Result<ReservationDetailDto>> GetByApartmentId(Guid id)
         {
-            var reservation = await reservationRespository.GetById(id);
-            if (reservation == null) 
-            {
-                return Result<ReservationDetailDto>.Fail("No se encontraron reservaciones", 404);
-            }
-            return Result<List<ReservationDetailDto>>.Ok(reservation);
+            var reservations = await _db.Reservations
+            .AsNoTracking()
+            .Where(async r => r.ApartmentId == apartmentId)
+            .Select(r => new ReservationListingDto(
+                r.Id,
+                r.CheckInDate,
+                r.CheckOutDate,
+                r.ApartmentId
+                ))
+               .ToListasync();
+
+            return Result<List<ReservationDetailDto>>.Ok(reservations);
 
         }
     }

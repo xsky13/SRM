@@ -11,8 +11,5 @@ namespace SRM.Api.Models.Dto.Reservation
         public DateTime CheckOutDate { get; set; } //
         public Guid ApartmentId { get; set; } //
 
-
-
-
     }
 }
