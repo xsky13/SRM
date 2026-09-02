@@ -5,6 +5,6 @@
         string Name,
         string CoverImgUrl,
         string Location,
-        float Price
+        decimal Price
     );
 }

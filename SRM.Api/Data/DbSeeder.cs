@@ -15,7 +15,7 @@ namespace SRM.Api.Data
                 new() { 
                     Name = "Depto Centro",
                     Description = "Lorem ipsum dolor sit amet.",
-                    Price = 40000F,
+                    Price = 40000,
                     Location = "Libertador San Martin",
                     Latitude = 0,
                     Longitude = 0,
@@ -24,7 +24,7 @@ namespace SRM.Api.Data
                 new() {
                     Name = "Depto Superior",
                     Description = "Lorem ipsum dolor sit amet.",
-                    Price = 40000F,
+                    Price = 40000,
                     Latitude = 0,
                     Longitude = 0,
                     Location = "Libertador San Martin",

@@ -6,7 +6,7 @@ namespace SRM.Api.Models.Dto.Apartment
         Guid Id,
         string Name,
         string Description,
-        float Price,
+        decimal Price,
         string Location,
         double Latitude,
         double Longitude,
