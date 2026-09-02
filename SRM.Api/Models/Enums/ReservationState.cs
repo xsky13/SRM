@@ -4,6 +4,8 @@
     {
         NotConfirmed = 1,
         ConfirmedPaymentIncomplete = 2,
-        ConfirmedPaymentComplete = 3
+        ConfirmedPaymentComplete = 3,
+        PaymentPending = 4,
+        Cancelled = 5
     }
 }
