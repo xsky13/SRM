@@ -5,6 +5,7 @@ using MercadoPago.Client.Preference;
 using MercadoPago.Resource.Preference;
 using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
+using SRM.Api.Data.Migrations;
 using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
@@ -35,6 +36,56 @@ namespace SRM.Api.Services
             Preference preference = await client.CreateAsync(request);
 
             return preference.Id;
+        }
+
+        public async Task FullPaymentWebhook(PaymentWebhookRequest request)
+        {
+            // se llama el webhook con el id de mercado pago
+            // conseguir el pago con ese id
+            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.MpPaymentId == request.Data.Id);
+            if (payment is null)
+            {
+                logger.LogWarning("Webhook recibido para un payment desconocido: {MpPaymentId}", request.Data.Id);
+                return;
+            }
+
+            // en base al estado de este actualizar el estado del pago
+            // convertirlo a long porque los pagos de mercado pago trabajan con long
+            if (!long.TryParse(request.Data.Id, out var mpPaymentId))
+            {
+                logger.LogWarning("Webhook con data.id no numérico: {DataId}", request.Data.Id);
+                return;
+            }
+
+            var client = new PaymentClient();
+            var mpPayment = await client.GetAsync(mpPaymentId);
+            var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
+
+            if (payment.PaymentStatus == newStatus)
+                return;
+
+            payment.PaymentStatus = newStatus;
+
+            var reservation = await _db.Reservations.FindAsync(payment.ReservationId);
+            if (reservation != null)
+            {
+                // actualizar el estado de la reserva tambien
+                reservation.State = newStatus switch
+                {
+                    PaymentStatus.Approved => ReservationState.ConfirmedPaymentComplete,
+                    PaymentStatus.Rejected or PaymentStatus.Cancelled => ReservationState.Cancelled,
+                    _ => reservation.State
+                };
+                reservation.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+
+            // mandar ticket si no lo hay
+            if (payment.TicketId == null)
+            {
+                // TODO: llamar servicio de ticket
+            }
         }
 
         public async Task<Result<PaymentDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey)

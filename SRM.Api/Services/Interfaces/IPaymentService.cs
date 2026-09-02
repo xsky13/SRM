@@ -8,5 +8,7 @@ namespace SRM.Api.Services.Interfaces
     {
         Task<string> CreatePreference(string title, int unitPrice);
         Task<Result<PaymentDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey);
+
+        Task FullPaymentWebhook(PaymentWebhookRequest request);
     }
 }
