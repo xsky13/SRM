@@ -35,21 +35,24 @@ namespace SRM.Api.Services
             
         }
 
-        public async Task<Result<ReservationListingDto>> GetByApartmentId(Guid id)
+        public async Task<Result<List<ReservationListingDto>>> GetByApartmentId(Guid id)
         {
+            // Fecha límite: hoy + 2 meses
+            var maxDate = DateTime.Now.AddMonths(2);
+
             var reservations = await _db.Reservations
-            .AsNoTracking()
-            .Where(r => r.ApartmentId == apartmentId)
-            .Select(r => new ReservationListingDto(
-                r.Id,
-                r.CheckInDate,
-                r.CheckOutDate,
-                r.ApartmentId
-            ))
-            .ToListAsync();
+                .AsNoTracking()
+                .Where(r => r.ApartmentId == id
+                            && r.CheckInDate <= maxDate)  // Validación: no más de 2 meses hacia adelante
+                .Select(r => new ReservationListingDto(
+                    r.Id,
+                    r.CheckInDate,
+                    r.CheckOutDate,
+                    r.ApartmentId
+                ))
+                .ToListAsync();
 
             return Result<List<ReservationListingDto>>.Ok(reservations);
-
         }
     }
 }
