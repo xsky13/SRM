@@ -8,8 +8,6 @@ using Microsoft.OpenApi;
 using Serilog;
 using SRM.Api;
 using SRM.Api.Data;
-using SRM.Api.Repositories;
-using SRM.Api.Repositories.Interfaces;
 using SRM.Api.Services;
 using SRM.Api.Services.Interfaces;
 using System.Text;
@@ -62,8 +60,6 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-builder.Services.AddScoped<IApartmentRepository, ApartmentRepository>();
-builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen(options =>
