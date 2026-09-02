@@ -10,6 +10,7 @@ namespace SRM.Api.Models.Entities
         public bool IsSign { get; set; }
         public DateTime PaymentDate { get; set; }
         public PaymentStatus PaymentStatus { get; set; }
+        public string MpPaymentId { get; set; } = string.Empty;
 
         public Guid ReservationId { get; set; }
         public Reservation Reservation { get; set; } = null!;
