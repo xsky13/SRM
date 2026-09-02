@@ -63,6 +63,7 @@ builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IApartmentRepository, ApartmentRepository>();
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen(options =>
