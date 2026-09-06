@@ -25,12 +25,10 @@ namespace SRM.Api.Controllers
         }
 
         [HttpPost("webhook")]
-        public ActionResult<string> Webhook([FromBody] PaymentWebhookRequest request)
+        public async Task<ActionResult<string>> Webhook([FromBody] PaymentWebhookRequest request)
         {
-            string json = JsonSerializer.Serialize(request);
-            Console.WriteLine(json);
-            logger.LogInformation("{@json}", json);
-            return Ok(json);
+            await paymentService.CardPaymentWebhook(request);
+            return Ok();
         }
     }
 }

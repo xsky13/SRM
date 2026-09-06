@@ -16,7 +16,7 @@ namespace SRM.Api.Services
 {
     public class PaymentService(AppDbContext _db, ILogger<GlobalExceptionHandler> logger) : IPaymentService
     {
-        public async Task<string> CreatePreference(string title, int unitPrice)
+        public async Task<string> CreatePreference(string title, decimal unitPrice)
         {
             var request = new PreferenceRequest
             {
@@ -38,14 +38,14 @@ namespace SRM.Api.Services
             return preference.Id;
         }
 
-        public async Task FullPaymentWebhook(PaymentWebhookRequest request)
+        public async Task CardPaymentWebhook(PaymentWebhookRequest request)
         {
             // se llama el webhook con el id de mercado pago
             // conseguir el pago con ese id
             var payment = await _db.Payments.FirstOrDefaultAsync(p => p.MpPaymentId == request.Data.Id);
-            if (payment is null)
+            if (payment == null)
             {
-                logger.LogWarning("Webhook recibido para un payment desconocido: {MpPaymentId}", request.Data.Id);
+                logger.LogWarning("Pago con el id no existe: {PaymentId}", request.Data.Id);
                 return;
             }
 
@@ -57,14 +57,14 @@ namespace SRM.Api.Services
                 return;
             }
 
+            // actualizar estado del pago
             var client = new PaymentClient();
             var mpPayment = await client.GetAsync(mpPaymentId);
+
             var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
-
-            if (payment.PaymentStatus == newStatus)
-                return;
-
             payment.PaymentStatus = newStatus;
+
+            // finalmente tambien actualizar el estado de la reserva
 
             var reservation = await _db.Reservations.FindAsync(payment.ReservationId);
             if (reservation != null)
@@ -86,7 +86,9 @@ namespace SRM.Api.Services
             {
                 // TODO: llamar servicio de ticket
             }
+
         }
+
 
         public async Task<Result<PaymentDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey)
         {
