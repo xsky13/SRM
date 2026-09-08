@@ -8,6 +8,7 @@ namespace SRM.Api.Models.Dto.Apartment
         string Description,
         decimal Price,
         string Location,
+        string CoverImgUrl,
         double Latitude,
         double Longitude,
         List<ImageDto> Images

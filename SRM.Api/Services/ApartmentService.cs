@@ -35,6 +35,7 @@ namespace SRM.Api.Services
                     a.Description,
                     a.Price,
                     a.Location,
+                    a.CoverImgUrl,
                     a.Latitude,
                     a.Longitude,
                     a.Images.Select(i => new Models.Dto.Images.ImageDto(
