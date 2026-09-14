@@ -34,7 +34,7 @@ namespace SRM.Api.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<string>> LoginUser([FromBody] CreateUserRequestDto request)
+        public async Task<ActionResult<string>> LoginUser([FromBody] LoginUserRequestDto request)
         {
             // retorna el token
             var result = await _authService.LoginUser(request.Email, request.Pwd);

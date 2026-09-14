@@ -10,18 +10,18 @@ using System.Text;
 
 namespace SRM.Api.Services
 {
-    public class TokenService : ITokenService
+    public class TokenService(IConfiguration configuration) : ITokenService
     {
         public Result<string> CreateToken(Guid id, string email, UserType userType)
         {
 
-            var envKey = Environment.GetEnvironmentVariable("SECRET_KEY")
+            var envKey = configuration["Jwt:Key"]
                 ?? throw new InvalidOperationException("KEY is not configured");
 
-            var issuer = Environment.GetEnvironmentVariable("ISSUER")
+            var issuer = configuration["ApiSettings:Issuer"]
                 ?? throw new InvalidOperationException("ISSUER is not configured");
 
-            var audience = Environment.GetEnvironmentVariable("AUDIENCE")
+            var audience = configuration["ApiSettings:Audience"]
                 ?? throw new InvalidOperationException("AUDIENCE is not configured");
 
             var claims = new[]
