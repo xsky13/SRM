@@ -4,12 +4,11 @@ using System.Text;
 
 namespace SRM.Api.Models.Dto.Reservation
 {
-    internal class ReservationDetailDto
+    public class ReservationDetailDto
     {
-        Guid ResrevationId;
-        DateTime CheckInDate;
-        DateTime CheckOutDate;
-        Guid ApartmenId;
-
+        public Guid ResrevationId { get; set; }
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public Guid ApartmentId { get; set; }
     }
 }

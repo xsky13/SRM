@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using SRM.Api.Models.Dto.Reservation;
+using Microsoft.AspNetCore.Mvc;
+using SRM.Api.Utils;
 
 
 namespace SRM.Api.Controllers
@@ -13,16 +15,16 @@ namespace SRM.Api.Controllers
     public class ReservationController(IReservationService _reservationService) : ControllerBase
     {
         [HttpGet("{id}")]
-        public async Task<ActionResult<List<ReservationListingDto>>> GetByReservationId()
+        public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(Guid id)
         {
-            var response = await _apartmentService.GetByReservationId();
+            var response = await _reservationService.GetReservationById(id);
             return response.ToActionResult();
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ReservationDetailDto>> GetByApartmentId(Guid id)
+        [HttpGet("apartment/{id}")]
+        public async Task<ActionResult<List<ReservationListingDto>>> GetByApartmentId(Guid id)
         {
-            var response = await _apartmentService.GetByApartmentId(id);
+            var response = await _reservationService.GetAllByApartmentId(id);
             return response.ToActionResult();
         }
     }
