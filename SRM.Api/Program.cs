@@ -11,6 +11,7 @@ using SRM.Api.Data;
 using SRM.Api.Services;
 using SRM.Api.Services.Interfaces;
 using System.Text;
+using System.Text.Json;
 
 MercadoPagoConfig.AccessToken = "TEST-8757392314054936-090112-0d1fdd0e5bd154c70da6c8ef04f75e85-1623332253";
 
@@ -52,7 +53,13 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
         .UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString"))
         .AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>()));
 
-builder.Services.AddControllers();
+
+// convert incoming snake_case to camelCase
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+}); 
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton<SoftDeleteInterceptor>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
