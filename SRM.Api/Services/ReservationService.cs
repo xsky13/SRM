@@ -17,9 +17,6 @@ namespace SRM.Api.Services
     public class ReservationService(AppDbContext _db) : IReservationService
     {
         public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId) {
-
-
-
             var reservation = await _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.Id == reservationId)
@@ -30,6 +27,9 @@ namespace SRM.Api.Services
                     ApartmentId = r.ApartmentId
                 })
                 .FirstOrDefaultAsync();
+
+            if (reservation == null)
+                return Result<ReservationDetailDto>.Fail("No existe la reserva", 404);
 
             return Result<ReservationDetailDto>.Ok(reservation);
             
