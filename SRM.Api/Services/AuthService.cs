@@ -1,49 +1,66 @@
-﻿using Microsoft.AspNetCore.Authentication.OAuth;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using SRM.Api.Models.Enums;
+﻿using MercadoPago.Resource.User;
+using Microsoft.EntityFrameworkCore;
+using SRM.Api.Data;
+using SRM.Api.Models.Entities;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SRM.Api.Services
 {
-    public class AuthService : IAuthService
+    public class AuthService(AppDbContext _db, ITokenService _tokenService) : IAuthService
     {
-        public Result<string> CreateToken(int id, string email, UserType userType)
+        public async Task<Result<string>> LoginUser(string email, string pwd)
         {
+            // find user with email
+            var userWithEmail = await _db.AppUsers.FirstOrDefaultAsync(user => user.Email == email);
 
-            var envKey = Environment.GetEnvironmentVariable("SECRET_KEY")
-                ?? throw new InvalidOperationException("KEY is not configured");
+            if (userWithEmail == null)
+                return Result<string>.Fail("El usuario con ese email no existe.");
 
-            var issuer = Environment.GetEnvironmentVariable("ISSUER")
-                ?? throw new InvalidOperationException("ISSUER is not configured");
+            // compare hash
+            if (!BCrypt.Net.BCrypt.Verify(pwd, userWithEmail.PwdHash))
+                return Result<string>.Fail("Contrasena incorrecta.");
 
-            var audience = Environment.GetEnvironmentVariable("AUDIENCE")
-                ?? throw new InvalidOperationException("AUDIENCE is not configured");
+            // return token
+            var token = _tokenService.CreateToken(userWithEmail.Id, userWithEmail.Email, userWithEmail.Usertype);
+            return Result<string>.Ok(token.Value!);
+        }
 
-            var claims = new[]
+        public async Task<Result<string>> RegisterUser(string firstName, string lastName, string telefono, string email, string pwd)
+        {
+            if (string.IsNullOrWhiteSpace(firstName))
+                return Result<string>.Fail("El primer nombre es obligatorio.");
+
+            if (string.IsNullOrWhiteSpace(lastName))
+                return Result<string>.Fail("El apellido es obligatorio.");
+
+            if (!Regex.IsMatch(telefono, @"^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$"))
+                return Result<string>.Fail("Telefono invalido.");
+
+            if (string.IsNullOrWhiteSpace(email))
+                return Result<string>.Fail("El email es obligatorio.");
+
+            if (string.IsNullOrWhiteSpace(pwd) || pwd.Length < 6)
+                return Result<string>.Fail("La contraseña debe tener al menos 6 caracteres.");
+
+            if (await _db.AppUsers.AnyAsync(user => user.Email == email))
+                return Result<string>.Fail("Ya existe un usuario con ese email.");
+
+            var newUser = new AppUser
             {
-                new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, email),
-                new Claim(ClaimTypes.Role, userType.ToString())
+                Name = firstName,
+                LastName = lastName,
+                Email = email,
+                PwdHash = BCrypt.Net.BCrypt.HashPassword(pwd),
+                Usertype = Models.Enums.UserType.User
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(envKey));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            _db.AppUsers.Add(newUser);
+            await _db.SaveChangesAsync();
 
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                notBefore: DateTime.UtcNow,
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: credentials
-            );
-
-            return Result<string>.Ok(new JwtSecurityTokenHandler().WriteToken(token));
+            var token = _tokenService.CreateToken(newUser.Id, newUser.Email, newUser.Usertype);
+            return Result<string>.Ok(token.Value!);
         }
     }
 }

@@ -1,10 +1,10 @@
-﻿using SRM.Api.Models.Enums;
-using SRM.Api.Utils;
+﻿using SRM.Api.Utils;
 
 namespace SRM.Api.Services.Interfaces
 {
     public interface IAuthService
     {
-        Result<string> CreateToken(int id, string email, UserType userType);
+        Task<Result<string>> LoginUser(string email, string pwd);
+        Task<Result<string>> RegisterUser(string nombre, string email, string pwd);
     }
 }
