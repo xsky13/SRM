@@ -1,4 +1,5 @@
-﻿using SRM.Api.Models.Enums;
+﻿using SRM.Api.Models.Dto.User;
+using SRM.Api.Models.Enums;
 
 namespace SRM.Api.Models.Entities
 {
@@ -17,5 +18,18 @@ namespace SRM.Api.Models.Entities
 
         public List<Reservation> Reservations { get; set; } = [];
         public List<Payment> Payments { get; set; } = [];
+
+        public UserListingDto ToListingDto()
+        {
+            return new UserListingDto
+            {
+                Id = Id,
+                Name = Name,
+                LastName = LastName,
+                Telefono = Telefono,
+                Email = Email,
+                PwdHash = PwdHash,
+            };
+        }
     }
 }

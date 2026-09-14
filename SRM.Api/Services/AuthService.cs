@@ -52,6 +52,7 @@ namespace SRM.Api.Services
                 Name = firstName,
                 LastName = lastName,
                 Email = email,
+                Telefono = telefono,
                 PwdHash = BCrypt.Net.BCrypt.HashPassword(pwd),
                 Usertype = Models.Enums.UserType.User
             };
