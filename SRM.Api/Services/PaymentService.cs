@@ -113,9 +113,9 @@ namespace SRM.Api.Services
             var user = new AppUser
             {
                 Id = Guid.NewGuid(),
-                Name = request.CardholderName,
+                Name = "",
                 LastName = "",
-                Email = request.CardholderEmail,
+                Email = request.FormData.Payer.CardholderEmail,
                 Telefono = "",
                 Usertype = UserType.Guest
             };
@@ -153,19 +153,19 @@ namespace SRM.Api.Services
             var paymentRequest = new PaymentCreateRequest
             {
                 TransactionAmount = fullCost,
-                Token = request.Token,
-                Description = request.Description,
-                Installments = request.Installments,
-                PaymentMethodId = request.PaymentMethodId,
+                Token = request.FormData.Token,
+                Description = $"Pago para reserva {reservation.Id}",
+                Installments = request.FormData.Installments,
+                PaymentMethodId = request.FormData.PaymentMethodId,
                 Payer = new PaymentPayerRequest
                 {
-                    Email = request.CardholderEmail,
+                    Email = request.FormData.Payer.CardholderEmail,
                     Identification = new IdentificationRequest
                     {
-                        Type = request.IdentificationType,
-                        Number = request.IdentificationNumber,
+                        Type = request.FormData.Payer.Identification.Type,
+                        Number = request.FormData.Payer.Identification.Number,
                     },
-                    FirstName = request.CardholderName
+                    FirstName = ""
                 },
             };
 
