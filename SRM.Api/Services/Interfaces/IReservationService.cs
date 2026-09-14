@@ -12,5 +12,7 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid apartmentId);
 
         public Task<Result<ReservationDetailDto>> GetReservationById(Guid id);
+
+        public Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId);
     }
 }

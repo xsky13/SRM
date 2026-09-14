@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Reservation;
@@ -52,6 +53,22 @@ namespace SRM.Api.Services
                 })
                 .ToListAsync();
 
+            return Result<List<ReservationListingDto>>.Ok(reservations);
+        }
+
+        public async Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId)
+        {
+            var reservations = await _db.Reservations
+                .AsNoTracking()
+                .Where(r => r.AppUserId == userId)
+                .Select(r => new ReservationListingDto
+                {
+                    Id = r.Id,
+                    CheckInDate = r.CheckInDate,
+                    CheckOutDate = r.CheckOutDate,
+                    ApartmentId = r.ApartmentId
+                })
+                .ToListAsync();
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
     }

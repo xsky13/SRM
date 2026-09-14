@@ -27,5 +27,12 @@ namespace SRM.Api.Controllers
             var response = await _reservationService.GetAllByApartmentId(id);
             return response.ToActionResult();
         }
+
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<List<ReservationListingDto>>> GetByUserId(Guid userId)
+        {
+            var response = await _reservationService.GetByUserId(userId);
+            return response.ToActionResult();
+        }
     }
 }
