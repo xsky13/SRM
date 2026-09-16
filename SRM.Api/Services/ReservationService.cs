@@ -38,7 +38,7 @@ namespace SRM.Api.Services
         public async Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid id)
         {
             // Fecha límite: hoy + 2 meses
-            var maxDate = DateTime.Now.AddMonths(2);
+            var maxDate = DateTime.UtcNow.AddMonths(2);
 
             var reservations = await _db.Reservations
                 .AsNoTracking()
@@ -49,7 +49,8 @@ namespace SRM.Api.Services
                     Id = r.Id,
                     CheckInDate = r.CheckInDate,
                     CheckOutDate = r.CheckOutDate,
-                    ApartmentId = r.ApartmentId
+                    ApartmentId = r.ApartmentId,
+                    ReservationState = r.State
                 })
                 .ToListAsync();
 
@@ -66,7 +67,8 @@ namespace SRM.Api.Services
                     Id = r.Id,
                     CheckInDate = r.CheckInDate,
                     CheckOutDate = r.CheckOutDate,
-                    ApartmentId = r.ApartmentId
+                    ApartmentId = r.ApartmentId,
+                    ReservationState = r.State
                 })
                 .ToListAsync();
             return Result<List<ReservationListingDto>>.Ok(reservations);
