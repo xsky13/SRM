@@ -47,17 +47,18 @@ namespace SRM.Api.Services
             if (payments == null || payments.Count == 0)
                 return new List<PaymentDto>();
 
-            return payments.Select(p => new PaymentDto(
-                p.Id,
-                p.Amount,
-                p.IsManual,
-                p.IsSign,
-                p.PaymentDate,
-                p.PaymentStatus,
-                p.ReservationId,
-                p.AppUserId,
-                p.TicketId
-            )).ToList();
+            return payments.Select(p => new PaymentDto
+            {
+                Id = p.Id,
+                Amount = p.Amount,
+                IsManual = p.IsManual,
+                IsSign = p.IsSign,
+                PaymentDate = p.PaymentDate,
+                PaymentStatus = p.PaymentStatus,
+                ReservationId = p.ReservationId,
+                AppUserId = p.AppUserId,
+                TicketId = p.TicketId
+            }).ToList();
         }
 
         public async Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid id)

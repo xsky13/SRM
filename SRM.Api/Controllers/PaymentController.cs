@@ -18,7 +18,7 @@ namespace SRM.Api.Controllers
         }
 
         [HttpPost("process_card_payment/{apartmentId}")]
-        public async Task<ActionResult<PaymentDto>> ProcessPayment([FromBody] CreatePaymentRequest request, Guid apartmentId)
+        public async Task<ActionResult<PaymentWithUserEmailDto>> ProcessPayment([FromBody] CreatePaymentRequest request, Guid apartmentId)
         {
             var result = await paymentService.ProcessCardPayment(request, apartmentId, Guid.NewGuid().ToString()); // fix idempotency
             return result.ToActionResult();

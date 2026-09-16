@@ -90,11 +90,11 @@ namespace SRM.Api.Services
         }
 
 
-        public async Task<Result<PaymentDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey)
         {
             // validaciones
             if (request.CheckOutDate.Date < request.CheckInDate.Date)
-                return Result<PaymentDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
+                return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
 
             decimal apartmentCost = await _db.Apartments
                 .Where(a => a.Id == apartmentId)
@@ -102,7 +102,7 @@ namespace SRM.Api.Services
                 .FirstOrDefaultAsync();
 
             if (apartmentCost == 0) // no se encontro el departamento
-                return Result<PaymentDto>.Fail("El departamento no existe.");
+                return Result<PaymentWithUserEmailDto>.Fail("El departamento no existe.");
 
             var diff = (request.CheckOutDate.Date - request.CheckInDate.Date).Days;
             var nights = Math.Max(diff, 1);
@@ -139,7 +139,7 @@ namespace SRM.Api.Services
                 r.CheckInDate < (request.CheckOutDate == request.CheckInDate ? request.CheckOutDate.AddDays(1) : request.CheckOutDate) &&
                 (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > request.CheckInDate
             );
-            if (datesInvalid) return Result<PaymentDto>.Fail("Ya hay una reserva en esta fecha.");
+            if (datesInvalid) return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva en esta fecha.");
 
             _db.AppUsers.Add(user);
             _db.Reservations.Add(reservation);
@@ -181,7 +181,7 @@ namespace SRM.Api.Services
                 logger.LogError(ex, "Error al procesar pago con Mercado Pago para reserva {ReservationId}", reservation.Id);
                 reservation.State = ReservationState.Cancelled;
                 await _db.SaveChangesAsync();
-                return Result<PaymentDto>.Fail("No se pudo procesar el pago");
+                return Result<PaymentWithUserEmailDto>.Fail("No se pudo procesar el pago");
             }
 
             var paymentStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
@@ -217,7 +217,19 @@ namespace SRM.Api.Services
             }
 
             // retornar success? y esperar que se llame al webhook para la confirmacion del 
-            return Result<PaymentDto>.Ok(new PaymentDto(dbPayment.Id, dbPayment.Amount, dbPayment.IsManual, dbPayment.IsSign, dbPayment.PaymentDate, dbPayment.PaymentStatus, dbPayment.ReservationId, dbPayment.AppUserId, null));
+            return Result<PaymentWithUserEmailDto>.Ok(new PaymentWithUserEmailDto
+            {
+                Id = dbPayment.Id,
+                Amount = dbPayment.Amount,
+                IsManual = dbPayment.IsManual,
+                IsSign = dbPayment.IsSign,
+                PaymentDate = dbPayment.PaymentDate,
+                PaymentStatus = dbPayment.PaymentStatus,
+                ReservationId = dbPayment.ReservationId,
+                AppUserId = dbPayment.AppUserId,
+                TicketId = null,
+                Email = request.Payer.Email
+            });
         }
 
     }
