@@ -1,4 +1,5 @@
-﻿using SRM.Api.Models.Enums;
+﻿using SRM.Api.Models.Dto.Reservation;
+using SRM.Api.Models.Enums;
 
 namespace SRM.Api.Models.Entities
 {
@@ -21,5 +22,20 @@ namespace SRM.Api.Models.Entities
         public AppUser AppUser { get; set; } = null!;
 
         public List<Payment> Payments { get; set; }
+
+        public ReservationDetailDto ToReservationDetailDto()
+        {
+            return new ReservationDetailDto
+            {
+                ResrevationId = Id,
+                CheckInDate = CheckInDate,
+                CheckOutDate = CheckOutDate,
+                ApartmentId = ApartmentId,
+                State = State,
+                UpdatedAt = UpdatedAt,
+                CreatedAt = CreatedAt,
+                Payments = Payments.Select(p => p.ToDto()).ToList()
+            };
+        }
     }
 }
