@@ -1,9 +1,17 @@
+using Microsoft.EntityFrameworkCore;
+using SRM.Api.Data;
+using SRM.Api.Models.Entities;
+using SRM.Api.Models.Enums;
+using SRM.Api.Services.Interfaces;
+using SRM.Api.Utils;
+using System.Text.RegularExpressions;
+
 namespace SRM.Api.Services
 {
-    public class UserService(AppDbContext _db, ITokenService _tokenService) : IUserService
+    public class UserService(AppDbContext _db) : IUserService
     {
 
-        public async Task<Result<void>> CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
+        public async Task CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
         {
 
             var newUser = new AppUser
@@ -20,24 +28,22 @@ namespace SRM.Api.Services
 
         }
 
-        Task<Result<void>> CreateUser(string email)
+        public void CreateUser(string email)
         {
             var newUser = new AppUser
             {
                 Id = Guid.NewGuid(),
                 Name = "",
                 LastName = "",
-                Email = email
+                Email = email,
                 Telefono = "",
                 Usertype = UserType.Guest
             };
             _db.AppUsers.Add(newUser);
-
         }
 
-        Task<Result<bool>> ValidateUser(AppUser user)
-        { 
-
+        public async Task<Result<bool>> ValidateUser(AppUser user)
+        {
             if (string.IsNullOrWhiteSpace(user.Name))
                 return Result<bool>.Fail("El primer nombre es obligatorio.");
 
@@ -55,15 +61,8 @@ namespace SRM.Api.Services
 
             if (await _db.AppUsers.AnyAsync(u => u.Email == user.Email))
                 return Result<bool>.Fail("Ya existe un usuario con ese email.");
-            
+
             return Result<bool>.Ok(true);
         }
-
-
-        
-           
-
-        
-
-
+    }
 }
