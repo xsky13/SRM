@@ -1,12 +1,37 @@
+using MercadoPago.Config;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Serilog;
+using SRM.Api;
 using SRM.Api.Data;
+using SRM.Api.Services;
+using SRM.Api.Services.Interfaces;
 using System.Text;
+using System.Text.Json;
+
+MercadoPagoConfig.AccessToken = "TEST-8757392314054936-090112-0d1fdd0e5bd154c70da6c8ef04f75e85-1623332253";
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, config) =>
+{
+    config
+        .MinimumLevel.Is(context.HostingEnvironment.IsDevelopment()
+            ? Serilog.Events.LogEventLevel.Debug
+            : Serilog.Events.LogEventLevel.Information)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File(
+            "/app/logs/log-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,           // solo guarda los ultimos 30 días. borra el resto
+            fileSizeLimitBytes: 50_000_000,       // 50 MB por si un día explota de logs
+            rollOnFileSizeLimit: true);           // si supera el límite de tamaño en el mismo día, arranca otro archivo
+});
 
 var allowedOrigins = builder.Configuration["Cors:AllowedOrigins"]?.Split(',')
     ?? new[] { "http://localhost:3000" };
@@ -23,12 +48,33 @@ builder.Services.AddCors(options =>
 });
 
 // Add services to the container.
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+    options
+        .UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString"))
+        .AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>()));
 
-builder.Services.AddControllers();
+
+// convert incoming snake_case to camelCase
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+}); 
+
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<SoftDeleteInterceptor>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+builder.Services.AddScoped<IApartmentService, ApartmentService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+
+//agregar servicios de Repositorio.
+
+
+builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -91,11 +137,44 @@ hc.AddCheck(
 
 var app = builder.Build();
 
+var imagesPath = Path.Combine(builder.Environment.ContentRootPath, "Storage", "Images");
+Directory.CreateDirectory(imagesPath); // crear por las dudas
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imagesPath),
+    RequestPath = "/images"
+});
+
+var containerImagesPath = Path.Combine(builder.Environment.ContentRootPath, "Storage", "Images");
+var seedImagesPath = Path.Combine(builder.Environment.ContentRootPath, "SeedData", "Images");
+
+//if (app.Environment.IsDevelopment())
+//{
+    ImageSeeder.SeedImages(seedImagesPath, containerImagesPath); // just do it. nike
+//}
+
+app.UseCors();
+
+ // logging, esconder requests a /health
+app.UseSerilogRequestLogging(options =>
+{
+    options.GetLevel = (httpContext, elapsed, ex) =>
+        httpContext.Request.Path.StartsWithSegments("/health")
+            ? Serilog.Events.LogEventLevel.Verbose  // lo baja a un nivel que normalmente no se muestra/guarda
+            : Serilog.Events.LogEventLevel.Information;
+});
+
 // AGREGA LAS MIGRACIONES EN EL CONTAINER DOCKER
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    if (app.Environment.IsDevelopment())
+    {
+        await DbSeeder.SeedAsync(db);
+    }
 }
 
 
