@@ -64,5 +64,10 @@ namespace SRM.Api.Services
 
             return Result<bool>.Ok(true);
         }
+
+        public async Task<bool> UserExists(Guid userId)
+        {
+            return await _db.AppUsers.AnyAsync(u => u.Id == userId);
+        }
     }
 }

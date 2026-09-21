@@ -1,4 +1,5 @@
-﻿using MercadoPago.Resource.User;
+﻿using MercadoPago.Resource.Payment;
+using MercadoPago.Resource.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using SRM.Api.Data;
@@ -132,5 +133,13 @@ namespace SRM.Api.Services
 
             return Result<Reservation>.Ok(reservation);
         }
+
+        public async Task<Result<ReservationDetailDto>> CreateReservation()
+        {
+
+        }
+
+
     }
 }
+
