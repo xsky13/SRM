@@ -1,12 +1,13 @@
-using SRM.Api.Dtos.Entities.User;
+using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
+using SRM.Api.Utils;
 
 namespace SRM.Api.Services.Interfaces
 {
     public interface IUserService
     {
-        Task<Result<void>> CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType);
-        Task<Result<void>> CreateUser(Guid id, string firstName, string lastName, string telefono, string email, string pwd, UserType userType);
-
+        public Task CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userTyp);
+        public void CreateUser(string email);
+        public Task<Result<bool>> ValidateUser(AppUser user);
     }
 }
