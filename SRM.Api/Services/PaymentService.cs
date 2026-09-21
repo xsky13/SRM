@@ -108,7 +108,7 @@ namespace SRM.Api.Services
 
         }
 
-        public async Task<Result<PaymentWithUserEmailDto>> PaySign(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid userId)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessSignPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid userId)
         {
             // validaciones
             if (request.CheckOutDate.Date < request.CheckInDate.Date)
@@ -223,9 +223,8 @@ namespace SRM.Api.Services
         }
 
 
-        public async Task<Result<PaymentWithUserEmailDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessCardPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid? userId = null)
         {
-            // validaciones
             if (request.CheckOutDate.Date < request.CheckInDate.Date)
                 return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
 
@@ -242,11 +241,17 @@ namespace SRM.Api.Services
             var fullCost = nights * apartmentCost;
 
             /*Pasos*/
-            // crear usuario guest
-            AppUser user = _userService.CreateUser(email: request.Payer.Email);
+            // crear usuario guest si no nos dan id
+            Guid userIdToUse;
+            if (userId.HasValue) userIdToUse = userId.Value;
+            else
+            {
+                var user = _userService.CreateUser(email: request.Payer.Email);
+                userIdToUse = user.Id;
+            }
 
             // crear reserva con estado payment pending. ya verifica si las fechas son validas o no
-            var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, user.Id);
+            var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userIdToUse);
             if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
 
             var reservation = reservationResult.Value;
@@ -302,7 +307,7 @@ namespace SRM.Api.Services
                 IsSign = false,
                 PaymentDate = DateTime.UtcNow,
                 ReservationId = reservation.Id,
-                AppUserId = user.Id,
+                AppUserId = userIdToUse,
                 PaymentStatus = paymentStatus,
                 MpPaymentId = mpPayment.Id.ToString()
             };
