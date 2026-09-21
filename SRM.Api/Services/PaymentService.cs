@@ -81,11 +81,11 @@ namespace SRM.Api.Services
                 // buscar pagos 
                 var payments = await _db.Payments
                     .Where(p => p.ReservationId == reservation.Id)
-                    .Select(p => new { p.IsSign })
+                    .Select(p => new { p.IsSign, p.PaymentStatus })
                     .ToListAsync();
 
                 // si no hay ninguno que no sea sena, el pago esta incompleto
-                if (!payments.Any(p => !p.IsSign))
+                if (!payments.Any(p => !p.IsSign && p.PaymentStatus == PaymentStatus.Approved))
                 {
                     reservation.State = newStatus switch
                     {
@@ -181,7 +181,7 @@ namespace SRM.Api.Services
             {
                 Amount = signCost,
                 IsManual = false,
-                IsSign = false,
+                IsSign = true,
                 PaymentDate = DateTime.UtcNow,
                 ReservationId = reservation.Id,
                 AppUserId = userId,

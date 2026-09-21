@@ -52,6 +52,10 @@ namespace SRM.Api.Services
             var reservations = await _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.ApartmentId == id
+                    && (r.State == ReservationState.ConfirmedPaymentComplete 
+                        || r.State == ReservationState.ConfirmedPaymentIncomplete
+                        || r.State == ReservationState.PaymentPending)
+                            && r.CheckInDate >= DateTime.UtcNow
                             && r.CheckInDate <= maxDate)  // Validación: no más de 2 meses hacia adelante
                 .Select(r => new ReservationListingDto
                 {

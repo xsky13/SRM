@@ -16,6 +16,7 @@ namespace SRM.Api.Services
 
             var newUser = new AppUser
             {
+                Id = Guid.NewGuid(),
                 Name = firstName,
                 LastName = lastName,
                 Email = email,
@@ -56,9 +57,6 @@ namespace SRM.Api.Services
 
             if (string.IsNullOrWhiteSpace(user.Email))
                 return Result<bool>.Fail("El email es obligatorio.");
-
-            if (string.IsNullOrWhiteSpace(user.PwdHash) || user.PwdHash.Length < 6)
-                return Result<bool>.Fail("La contraseña debe tener al menos 6 caracteres.");
 
             if (await _db.AppUsers.AnyAsync(u => u.Email == user.Email))
                 return Result<bool>.Fail("Ya existe un usuario con ese email.");
