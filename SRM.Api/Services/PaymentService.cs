@@ -14,7 +14,7 @@ using SRM.Api.Utils;
 
 namespace SRM.Api.Services
 {
-    public class PaymentService(AppDbContext _db, ILogger<GlobalExceptionHandler> logger) : IPaymentService
+    public class PaymentService(AppDbContext _db, IReservationService _reservationService, ILogger<GlobalExceptionHandler> logger) : IPaymentService
     {
         public async Task<string> CreatePreference(string title, decimal unitPrice)
         {
@@ -134,11 +134,7 @@ namespace SRM.Api.Services
             };
 
             // fijarse si las fechas seleccionadas colisionan con alguna confirmada o que tiene pago pendiente.
-            var datesInvalid = await _db.Reservations.AnyAsync(r =>
-                (r.State == ReservationState.ConfirmedPaymentComplete || r.State == ReservationState.ConfirmedPaymentIncomplete || r.State == ReservationState.PaymentPending) &&
-                r.CheckInDate < (request.CheckOutDate == request.CheckInDate ? request.CheckOutDate.AddDays(1) : request.CheckOutDate) &&
-                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > request.CheckInDate
-            );
+            var datesInvalid = await _reservationService.DatesAreInvalid(request.CheckOutDate, request.CheckInDate);
             if (datesInvalid) return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva en esta fecha.");
 
             _db.AppUsers.Add(user);

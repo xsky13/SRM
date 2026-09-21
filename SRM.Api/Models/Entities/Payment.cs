@@ -1,4 +1,5 @@
-﻿using SRM.Api.Models.Enums;
+﻿using SRM.Api.Models.Dto.Payment;
+using SRM.Api.Models.Enums;
 
 namespace SRM.Api.Models.Entities
 {
@@ -20,5 +21,38 @@ namespace SRM.Api.Models.Entities
 
         public Guid? TicketId { get; set; }
         public Ticket? Ticket { get; set; }
+
+        public PaymentDto ToDto()
+        {
+            return new PaymentDto
+            {
+                Id = Id,
+                Amount = Amount,
+                IsManual = IsManual,
+                IsSign = IsSign,
+                PaymentDate = PaymentDate,
+                PaymentStatus = PaymentStatus,
+                ReservationId = ReservationId,
+                AppUserId = AppUserId,
+                TicketId = TicketId
+            };
+        }
+
+        public PaymentWithUserEmailDto ToDtoWithUserEmail()
+        {
+            return new PaymentWithUserEmailDto
+            {
+                Id = Id,
+                Amount = Amount,
+                IsManual = IsManual,
+                IsSign = IsSign,
+                PaymentDate = PaymentDate,
+                PaymentStatus = PaymentStatus,
+                ReservationId = ReservationId,
+                AppUserId = AppUserId,
+                TicketId = TicketId,
+                Email = AppUser.Email
+            };
+        }
     }
 }

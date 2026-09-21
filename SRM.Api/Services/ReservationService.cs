@@ -1,10 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MercadoPago.Resource.Payment;
+using MercadoPago.Resource.User;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Apartment;
-using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Dto.Payment;
+using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Entities;
+using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using System;
@@ -99,5 +102,44 @@ namespace SRM.Api.Services
                 .ToListAsync();
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
+
+        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate)
+        {
+            var datesInvalid = await _db.Reservations.AnyAsync(r =>
+                (r.State == ReservationState.ConfirmedPaymentComplete || r.State == ReservationState.ConfirmedPaymentIncomplete || r.State == ReservationState.PaymentPending) &&
+                r.CheckInDate < (checkOutDate == checkInDate ? checkOutDate.AddDays(1) : checkOutDate) &&
+                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate
+            );
+            return datesInvalid;
+        }
+
+        public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
+        {
+            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate);
+            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
+
+            var reservation = new Reservation
+            {
+                Id = Guid.NewGuid(),
+                CheckInDate = checkInDate,
+                CheckOutDate = checkOutDate,
+                State = ReservationState.PaymentPending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ApartmentId = apartmentId,
+                AppUserId = userId
+            };
+            _db.Reservations.Add(reservation);
+
+            return Result<Reservation>.Ok(reservation);
+        }
+
+        public async Task<Result<ReservationDetailDto>> CreateReservation()
+        {
+
+        }
+
+
     }
 }
+

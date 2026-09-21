@@ -1,9 +1,5 @@
 ﻿using SRM.Api.Models.Enums;
-using SRM.Api.Models.Entities;
 using SRM.Api.Models.Dto.Payment;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace SRM.Api.Models.Dto.Reservation
 {
@@ -16,7 +12,7 @@ namespace SRM.Api.Models.Dto.Reservation
         public ReservationState State { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
-        public List< PaymentDto> Payments { get; set; }
+        public List<PaymentDto> Payments { get; set; }
 
     }
 }
