@@ -11,7 +11,7 @@ namespace SRM.Api.Services
     public class UserService(AppDbContext _db) : IUserService
     {
 
-        public async Task CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
+        public AppUser CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
         {
 
             var newUser = new AppUser
@@ -25,10 +25,10 @@ namespace SRM.Api.Services
             };
 
             _db.AppUsers.Add(newUser);
-
+            return newUser;
         }
 
-        public void CreateUser(string email)
+        public AppUser CreateUser(string email)
         {
             var newUser = new AppUser
             {
@@ -40,6 +40,7 @@ namespace SRM.Api.Services
                 Usertype = UserType.Guest
             };
             _db.AppUsers.Add(newUser);
+            return newUser;
         }
 
         public async Task<Result<bool>> ValidateUser(AppUser user)
