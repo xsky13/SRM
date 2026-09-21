@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MercadoPago.Resource.User;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Apartment;
@@ -109,6 +110,27 @@ namespace SRM.Api.Services
                 (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate
             );
             return datesInvalid;
+        }
+
+        public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
+        {
+            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate);
+            if (datesInvalid) return Result<ReservationDetailDto>.Fail("Fechas invalidas");
+
+            var reservation = new Reservation
+            {
+                Id = Guid.NewGuid(),
+                CheckInDate = checkInDate,
+                CheckOutDate = checkOutDate,
+                State = ReservationState.PaymentPending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ApartmentId = apartmentId,
+                AppUserId = userId
+            };
+            _db.Reservations.Add(reservation);
+
+            return Result<ReservationDetailDto>.Ok(reservation);
         }
     }
 }
