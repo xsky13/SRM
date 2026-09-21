@@ -34,5 +34,6 @@ namespace SRM.Api.Controllers
             var response = await _reservationService.GetByUserId(userId);
             return response.ToActionResult();
         }
+
     }
 }

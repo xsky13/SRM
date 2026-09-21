@@ -115,7 +115,7 @@ namespace SRM.Api.Services
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
             var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate);
-            if (datesInvalid) return Result<ReservationDetailDto>.Fail("Fechas invalidas");
+            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
 
             var reservation = new Reservation
             {
@@ -130,7 +130,7 @@ namespace SRM.Api.Services
             };
             _db.Reservations.Add(reservation);
 
-            return Result<ReservationDetailDto>.Ok(reservation);
+            return Result<Reservation>.Ok(reservation);
         }
     }
 }
