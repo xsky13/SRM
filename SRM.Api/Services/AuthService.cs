@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Entities;
+using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using System.Text.RegularExpressions;
@@ -16,6 +17,9 @@ namespace SRM.Api.Services
             var userWithEmail = await _db.AppUsers.FirstOrDefaultAsync(user => user.Email == email);
 
             if (userWithEmail == null)
+                return Result<string>.Fail("El usuario con ese email no existe.");
+
+            if (userWithEmail.Usertype == UserType.Guest)
                 return Result<string>.Fail("El usuario con ese email no existe.");
 
             // compare hash
