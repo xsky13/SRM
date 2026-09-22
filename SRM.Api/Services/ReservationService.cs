@@ -87,19 +87,20 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate)
+        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId)
         {
             var datesInvalid = await _db.Reservations.AnyAsync(r =>
                 (r.State == ReservationState.ConfirmedPaymentComplete || r.State == ReservationState.ConfirmedPaymentIncomplete || r.State == ReservationState.PaymentPending) &&
                 r.CheckInDate < (checkOutDate == checkInDate ? checkOutDate.AddDays(1) : checkOutDate) &&
-                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate
+                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate &&
+                r.ApartmentId == apartmentId
             );
             return datesInvalid;
         }
 
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
-            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate);
+            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
             if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
 
             var reservation = new Reservation
