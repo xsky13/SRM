@@ -46,17 +46,19 @@ namespace SRM.Api.Services
 
         public async Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid id)
         {
-            // Fecha límite: hoy + 2 meses
-            var maxDate = DateTime.UtcNow.AddMonths(2);
+            // Start of today in UTC (00:00:00)
+            var today = DateTime.UtcNow.Date;
+            var maxDate = today.AddMonths(2);
 
             var reservations = await _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.ApartmentId == id
-                    && (r.State == ReservationState.ConfirmedPaymentComplete 
+                    && (r.State == ReservationState.ConfirmedPaymentComplete
                         || r.State == ReservationState.ConfirmedPaymentIncomplete
                         || r.State == ReservationState.PaymentPending)
-                            && r.CheckInDate >= DateTime.UtcNow
-                            && r.CheckInDate <= maxDate)  // Validación: no más de 2 meses hacia adelante
+                    // Includes today's check-ins AND ongoing stays checking out today or later
+                    && r.CheckOutDate >= today
+                    && r.CheckInDate <= maxDate)
                 .Select(r => new ReservationListingDto
                 {
                     Id = r.Id,
@@ -89,19 +91,40 @@ namespace SRM.Api.Services
 
         public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId)
         {
-            var datesInvalid = await _db.Reservations.AnyAsync(r =>
-                (r.State == ReservationState.ConfirmedPaymentComplete || r.State == ReservationState.ConfirmedPaymentIncomplete || r.State == ReservationState.PaymentPending) &&
-                r.CheckInDate < (checkOutDate == checkInDate ? checkOutDate.AddDays(1) : checkOutDate) &&
-                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate &&
-                r.ApartmentId == apartmentId
-            );
-            return datesInvalid;
+            var effectiveCheckOut = checkOutDate == checkInDate ? checkOutDate.AddDays(1) : checkOutDate;
+
+            // Fetch conflicting reservations instead of just checking existence
+            var conflictingReservations = await _db.Reservations
+                .Where(r =>
+                    (r.State == ReservationState.ConfirmedPaymentComplete ||
+                     r.State == ReservationState.ConfirmedPaymentIncomplete ||
+                     r.State == ReservationState.PaymentPending) &&
+                    r.ApartmentId == apartmentId &&
+                    r.CheckInDate < effectiveCheckOut &&
+                    (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate
+                )
+                .ToListAsync();
+
+            // Print details of conflicting records
+            Console.WriteLine($"\n--- [DEBUG] DatesAreInvalid Check ---");
+            Console.WriteLine($"Input CheckIn: {checkInDate} | CheckOut: {checkOutDate} | Apartment: {apartmentId}");
+            Console.WriteLine($"Found {conflictingReservations.Count} conflicting reservation(s):");
+
+            foreach (var r in conflictingReservations)
+            {
+                Console.WriteLine($" -> Reservation Id: {r.Id} | State: {r.State} | DB CheckIn: {r.CheckInDate} | DB CheckOut: {r.CheckOutDate}");
+            }
+            Console.WriteLine("-------------------------------------\n");
+
+            return conflictingReservations.Any();
         }
 
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
+            Console.WriteLine($"\n\n checkDate: {checkInDate} \n\n");
             var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
             if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
+
 
             var reservation = new Reservation
             {
@@ -114,11 +137,15 @@ namespace SRM.Api.Services
                 ApartmentId = apartmentId,
                 AppUserId = userId
             };
+
             _db.Reservations.Add(reservation);
 
             return Result<Reservation>.Ok(reservation);
         }
-
+        public async Task SaveChanges()
+        {
+            await _db.SaveChangesAsync();
+        }
     }
 }
 

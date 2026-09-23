@@ -16,5 +16,6 @@ namespace SRM.Api.Services.Interfaces
 
         public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId);
         public Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
+        public Task SaveChanges();
     }
 }
