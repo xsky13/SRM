@@ -69,5 +69,6 @@ namespace SRM.Api.Services
         {
             return await _db.AppUsers.AnyAsync(u => u.Id == userId);
         }
+
     }
 }
