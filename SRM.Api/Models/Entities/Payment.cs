@@ -51,7 +51,7 @@ namespace SRM.Api.Models.Entities
                 ReservationId = ReservationId,
                 AppUserId = AppUserId,
                 TicketId = TicketId,
-                Email = AppUser.Email
+                Email = ""
             };
         }
     }

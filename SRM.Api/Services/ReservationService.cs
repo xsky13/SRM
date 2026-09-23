@@ -1,4 +1,4 @@
-﻿using MercadoPago.Resource.Payment;
+﻿//using MercadoPago.Resource.Payment;
 using MercadoPago.Resource.User;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
@@ -32,7 +32,7 @@ namespace SRM.Api.Services
                     State = r.State,
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
-                    Payments = MapPaymentsToDto(r.Payments),
+                    Payments = r.Payments.Select(p => p.ToDto()).ToList()
 
                 })
                 .FirstOrDefaultAsync();
@@ -44,26 +44,6 @@ namespace SRM.Api.Services
 
         }
 
-        private List<PaymentDto> MapPaymentsToDto(List<Payment> payments)
-        {
-            // esta funcion mapea la lista de pagos a una lista de PaymentDto
-            if (payments == null || payments.Count == 0)
-                return new List<PaymentDto>();
-
-            return payments.Select(p => new PaymentDto
-            {
-                Id = p.Id,
-                Amount = p.Amount,
-                IsManual = p.IsManual,
-                IsSign = p.IsSign,
-                PaymentDate = p.PaymentDate,
-                PaymentStatus = p.PaymentStatus,
-                ReservationId = p.ReservationId,
-                AppUserId = p.AppUserId,
-                TicketId = p.TicketId
-            }).ToList();
-        }
-
         public async Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid id)
         {
             // Fecha límite: hoy + 2 meses
@@ -72,6 +52,10 @@ namespace SRM.Api.Services
             var reservations = await _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.ApartmentId == id
+                    && (r.State == ReservationState.ConfirmedPaymentComplete 
+                        || r.State == ReservationState.ConfirmedPaymentIncomplete
+                        || r.State == ReservationState.PaymentPending)
+                            && r.CheckInDate >= DateTime.UtcNow
                             && r.CheckInDate <= maxDate)  // Validación: no más de 2 meses hacia adelante
                 .Select(r => new ReservationListingDto
                 {
@@ -103,19 +87,20 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate)
+        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId)
         {
             var datesInvalid = await _db.Reservations.AnyAsync(r =>
                 (r.State == ReservationState.ConfirmedPaymentComplete || r.State == ReservationState.ConfirmedPaymentIncomplete || r.State == ReservationState.PaymentPending) &&
                 r.CheckInDate < (checkOutDate == checkInDate ? checkOutDate.AddDays(1) : checkOutDate) &&
-                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate
+                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate &&
+                r.ApartmentId == apartmentId
             );
             return datesInvalid;
         }
 
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
-            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate);
+            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
             if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
 
             var reservation = new Reservation
@@ -133,12 +118,6 @@ namespace SRM.Api.Services
 
             return Result<Reservation>.Ok(reservation);
         }
-
-        public async Task<Result<ReservationDetailDto>> CreateReservation()
-        {
-
-        }
-
 
     }
 }

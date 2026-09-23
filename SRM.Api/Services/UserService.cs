@@ -11,11 +11,12 @@ namespace SRM.Api.Services
     public class UserService(AppDbContext _db) : IUserService
     {
 
-        public async Task CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
+        public AppUser CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
         {
 
             var newUser = new AppUser
             {
+                Id = Guid.NewGuid(),
                 Name = firstName,
                 LastName = lastName,
                 Email = email,
@@ -25,10 +26,10 @@ namespace SRM.Api.Services
             };
 
             _db.AppUsers.Add(newUser);
-
+            return newUser;
         }
 
-        public void CreateUser(string email)
+        public AppUser CreateUser(string email)
         {
             var newUser = new AppUser
             {
@@ -40,6 +41,7 @@ namespace SRM.Api.Services
                 Usertype = UserType.Guest
             };
             _db.AppUsers.Add(newUser);
+            return newUser;
         }
 
         public async Task<Result<bool>> ValidateUser(AppUser user)
@@ -55,9 +57,6 @@ namespace SRM.Api.Services
 
             if (string.IsNullOrWhiteSpace(user.Email))
                 return Result<bool>.Fail("El email es obligatorio.");
-
-            if (string.IsNullOrWhiteSpace(user.PwdHash) || user.PwdHash.Length < 6)
-                return Result<bool>.Fail("La contraseña debe tener al menos 6 caracteres.");
 
             if (await _db.AppUsers.AnyAsync(u => u.Email == user.Email))
                 return Result<bool>.Fail("Ya existe un usuario con ese email.");
