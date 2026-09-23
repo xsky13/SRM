@@ -37,7 +37,7 @@ namespace SRM.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId )
+        public async Task<ActionResult<Reservation>> CreateReservation([FromBody] CreateReservationRequestDto request)
         {
 
             // encontrar el usuario a travez del token de autenticacion
@@ -54,7 +54,8 @@ namespace SRM.Api.Controllers
             if (!await _userService.UserExists(userGuid))
                 return BadRequest("Usuario no encontrado.");
 
-            var response = await _reservationService.CreateReservation(checkInDate, checkOutDate, apartmentId, userGuid);
+            var response = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, request.ApartmentId, userGuid);
+            await _reservationService.SaveChanges();
 
             return response.ToActionResult();
         

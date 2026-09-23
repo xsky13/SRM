@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
+using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
@@ -69,5 +70,15 @@ namespace SRM.Api.Services
             return await _db.AppUsers.AnyAsync(u => u.Id == userId);
         }
 
+<<<<<<< HEAD
+=======
+        public async Task<Result<UserListingDto>> GetUser(Guid userId)
+        {
+            var user = await _db.AppUsers.FindAsync(userId);
+            if (user == null) return Result<UserListingDto>.Fail("No existe el usuario");
+
+            return Result<UserListingDto>.Ok(user.ToListingDto());
+        }
+>>>>>>> d5f049253b6cde1b9a661e081e9e4bdf10c3a565
     }
 }
