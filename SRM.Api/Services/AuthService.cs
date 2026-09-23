@@ -14,7 +14,7 @@ namespace SRM.Api.Services
         public async Task<Result<string>> LoginUser(string email, string pwd)
         {
             // find user with email
-            var userWithEmail = await _db.AppUsers.FirstOrDefaultAsync(user => user.Email == email);
+            var userWithEmail = await _db.AppUsers.FirstOrDefaultAsync(user => user.Email == email && user.Usertype != UserType.Guest);
 
             if (userWithEmail == null)
                 return Result<string>.Fail("El usuario con ese email no existe.");

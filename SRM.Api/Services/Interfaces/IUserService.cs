@@ -1,3 +1,4 @@
+using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Utils;
@@ -10,6 +11,7 @@ namespace SRM.Api.Services.Interfaces
         public AppUser CreateUser(string email);
         public Task<Result<bool>> ValidateUser(AppUser user);
         public Task<bool> UserExists(Guid userId);
+        public Task<Result<UserListingDto>> GetUser(Guid userId);
 
     }
 }
