@@ -42,7 +42,7 @@ namespace SRM.Api.Controllers
 
             // encontrar el usuario a travez del token de autenticacion
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (userId == null)
                 return Unauthorized();
 
@@ -55,10 +55,33 @@ namespace SRM.Api.Controllers
                 return BadRequest("Usuario no encontrado.");
 
             var response = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, request.ApartmentId, userGuid);
-            await _reservationService.SaveChanges();
 
             return response.ToActionResult();
-        
+
+        }
+
+        [HttpPost("with_auth")]
+        public async Task<ActionResult<Reservation>> CreateAuthReservation([FromBody] CreateReservationRequestDto request)
+        {
+
+            // encontrar el usuario a travez del token de autenticacion
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId == null)
+                return Unauthorized();
+
+            var userGuid = Guid.Empty;
+            if (!Guid.TryParse(userId, out userGuid))
+                return BadRequest("Id invalido.");
+
+            // llamar al servicio de usuario para validad al usuario y obtener su guid
+            if (!await _userService.UserExists(userGuid))
+                return BadRequest("Usuario no encontrado.");
+
+            var response = await _reservationService.CreateAuthReservation(request.CheckInDate, request.CheckOutDate, request.ApartmentId, userGuid);
+
+            return response.ToActionResult();
+
         }
     }
 }

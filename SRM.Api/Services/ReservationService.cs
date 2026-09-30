@@ -21,10 +21,12 @@ namespace SRM.Api.Services
     public class ReservationService(AppDbContext _db) : IReservationService
     {
         public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId) {
+            ReservationDetailDto returnedReservation;
             var reservation = await _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.Id == reservationId)
-                .Select(r => new ReservationDetailDto {
+                .Select(r => new ReservationDetailDto
+                {
                     ResrevationId = r.Id,
                     CheckInDate = r.CheckInDate,
                     CheckOutDate = r.CheckOutDate,
@@ -32,15 +34,34 @@ namespace SRM.Api.Services
                     State = r.State,
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
-                    Payments = r.Payments.Select(p => p.ToDto()).ToList()
-
+                    Payments = r.Payments.Select(p => p.ToDto()).ToList(),
+                    ApartmentName = r.Apartment.Name
                 })
                 .FirstOrDefaultAsync();
+
 
             if (reservation == null)
                 return Result<ReservationDetailDto>.Fail("No existe la reserva", 404);
 
-            return Result<ReservationDetailDto>.Ok(reservation);
+
+            returnedReservation = reservation;
+
+            decimal apartmentCost = await _db.Apartments
+                .Where(a => a.Id == reservation.ApartmentId)
+                .Select(a => a.Price)
+                .FirstOrDefaultAsync();
+
+            if (apartmentCost == 0) // no se encontro el departamento
+                return Result<ReservationDetailDto>.Fail("El departamento no existe.");
+
+            var diff = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days;
+            var nights = Math.Max(diff, 1);
+            var fullCost = nights * apartmentCost;
+
+            returnedReservation.FullCost = fullCost;
+
+
+            return Result<ReservationDetailDto>.Ok(returnedReservation);
 
         }
 
@@ -83,7 +104,8 @@ namespace SRM.Api.Services
                     CheckInDate = r.CheckInDate,
                     CheckOutDate = r.CheckOutDate,
                     ApartmentId = r.ApartmentId,
-                    ReservationState = r.State
+                    ReservationState = r.State,
+                    ApartmentName = r.Apartment.Name
                 })
                 .ToListAsync();
             return Result<List<ReservationListingDto>>.Ok(reservations);
@@ -142,6 +164,32 @@ namespace SRM.Api.Services
 
             return Result<Reservation>.Ok(reservation);
         }
+
+        public async Task<Result<Reservation>> CreateAuthReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
+        {
+            var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
+            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
+
+
+            var reservation = new Reservation
+            {
+                Id = Guid.NewGuid(),
+                CheckInDate = checkInDate,
+                CheckOutDate = checkOutDate,
+                State = ReservationState.NotConfirmed,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ApartmentId = apartmentId,
+                AppUserId = userId
+            };
+
+            _db.Reservations.Add(reservation);
+            await _db.SaveChangesAsync();
+
+            return Result<Reservation>.Ok(reservation);
+        }
+
+
         public async Task SaveChanges()
         {
             await _db.SaveChangesAsync();
