@@ -13,6 +13,7 @@ namespace SRM.Api.Models.Dto.Reservation
         public DateTime UpdatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<PaymentDto> Payments { get; set; }
-
+        public string ApartmentName { get; set; }
+        public decimal FullCost { get; set; }
     }
 }
