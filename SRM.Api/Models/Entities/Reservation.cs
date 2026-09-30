@@ -34,7 +34,6 @@ namespace SRM.Api.Models.Entities
                 State = State,
                 UpdatedAt = UpdatedAt,
                 CreatedAt = CreatedAt,
-                ApartmentName = Apartment.Name,
                 Payments = Payments.Select(p => p.ToDto()).ToList()
             };
         }
