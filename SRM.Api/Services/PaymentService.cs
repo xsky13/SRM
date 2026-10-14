@@ -13,7 +13,7 @@ using SRM.Api.Utils;
 
 namespace SRM.Api.Services
 {
-    public class PaymentService(AppDbContext _db, IReservationService _reservationService, IUserService _userService, ILogger<GlobalExceptionHandler> logger) : IPaymentService
+    public class PaymentService(AppDbContext _db, IReservationService _reservationService, IBankService _bankService, IUserService _userService, ILogger<GlobalExceptionHandler> logger) : IPaymentService
     {
         public async Task CardPaymentWebhook(PaymentWebhookRequest request)
         {
@@ -86,65 +86,6 @@ namespace SRM.Api.Services
         }
 
 
-        /*
-         * IMPORTANTE: SIEMPRE LLAMAR db.SaveChanges DESPUES DE USAR ESTA FUNCION.
-         */
-        public async Task<Result<Payment>> CreatePayment(CreatePaymentRequest request, decimal amount, Guid userId, Guid reservationId, string idempotencyKey, bool isSign)
-        {
-            var requestOptions = new RequestOptions();
-            requestOptions.CustomHeaders.Add("x-idempotency-key", idempotencyKey);
-
-            var paymentRequest = new PaymentCreateRequest
-            {
-                TransactionAmount = amount,
-                Token = request.Token,
-                Description = $"Pago para reserva {reservationId}",
-                Installments = request.Installments,
-                PaymentMethodId = request.Payment_Method_Id,
-                Payer = new PaymentPayerRequest
-                {
-                    Email = request.Payer.Email,
-                    Identification = new IdentificationRequest
-                    {
-                        Type = request.Payer.Identification.Type,
-                        Number = request.Payer.Identification.Number,
-                    },
-                    FirstName = ""
-                },
-            };
-
-            var client = new PaymentClient();
-            MercadoPago.Resource.Payment.Payment mpPayment;
-
-            try
-            {
-                mpPayment = await client.CreateAsync(paymentRequest, requestOptions);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error al procesar pago con Mercado Pago para reserva {ReservationId}", reservationId);
-                return Result<Payment>.Fail("No se pudo procesar el pago");
-            }
-
-            var paymentStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
-            var dbPayment = new Payment
-            {
-                Amount = amount,
-                IsManual = false,
-                IsSign = isSign,
-                PaymentDate = DateTime.UtcNow,
-                ReservationId = reservationId,
-                AppUserId = userId,
-                PaymentStatus = paymentStatus,
-                MpPaymentId = mpPayment.Id.ToString()
-            };
-            _db.Payments.Add(dbPayment);
-
-            return Result<Payment>.Ok(dbPayment);
-        }
-
-
-
         public async Task<Result<PaymentWithUserEmailDto>> ProcessFullPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid? userId = null, Guid? reservationId = null)
         {
             if (request.CheckOutDate.Date < request.CheckInDate.Date)
@@ -181,7 +122,7 @@ namespace SRM.Api.Services
 
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
 
-            var paymentResult = await CreatePayment(request, amount, userIdToUse, reservation.Id, idempotencyKey, isSign: false);
+            var paymentResult = await _bankService.CreatePayment(request, amount, userIdToUse, reservation.Id, idempotencyKey, isSign: false);
             if (!paymentResult.Success)
             {
                 reservation.State = ReservationState.Cancelled;
@@ -241,7 +182,7 @@ namespace SRM.Api.Services
 
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
 
-            var paymentResult = await CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: true);
+            var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: true);
             if (!paymentResult.Success)
             {
                 reservation.State = ReservationState.Cancelled;
@@ -292,7 +233,7 @@ namespace SRM.Api.Services
 
             ReservationState prevReservationState = reservation.State;
 
-            var paymentResult = await CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: false);
+            var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: false);
             if (!paymentResult.Success)
             {
                 reservation.State = prevReservationState;
