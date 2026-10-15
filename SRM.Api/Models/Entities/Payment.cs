@@ -13,6 +13,10 @@ namespace SRM.Api.Models.Entities
         public PaymentStatus PaymentStatus { get; set; }
         public string MpPaymentId { get; set; } = string.Empty;
 
+        // para editar pagos
+        public DateTime? PendingCheckInDate { get; set; }
+        public DateTime? PendingCheckOutDate { get; set; }
+
         public Guid ReservationId { get; set; }
         public Reservation Reservation { get; set; } = null!;
 
