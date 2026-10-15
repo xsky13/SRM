@@ -83,5 +83,24 @@ namespace SRM.Api.Controllers
             return response.ToActionResult();
 
         }
+
+        [HttpPut("{reservationId}")]
+        public async Task<ActionResult<ReservationDetailDto>> EditOwnReservation([FromBody] EditOwnReservationRequestDto request, Guid reservationId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId == null)
+                return Unauthorized();
+
+            if (!Guid.TryParse(userId, out var userGuid))
+                return BadRequest("Id invalido.");
+
+            // llamar al servicio de usuario para validad al usuario y obtener su guid
+            if (!await _userService.UserExists(userGuid))
+                return BadRequest("Usuario no encontrado.");
+
+            var response = await _reservationService.EditOwnReservation(request, reservationId, userGuid);
+            return response.ToActionResult();
+        }
     }
 }
