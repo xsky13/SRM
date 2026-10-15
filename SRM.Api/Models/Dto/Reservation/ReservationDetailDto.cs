@@ -1,0 +1,21 @@
+﻿using SRM.Api.Models.Dto.Apartment;
+using SRM.Api.Models.Dto.Payment;
+using SRM.Api.Models.Enums;
+
+namespace SRM.Api.Models.Dto.Reservation
+{
+    public class ReservationDetailDto
+    {
+        public Guid ResrevationId { get; set; }
+        public DateTime CheckInDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
+        public Guid ApartmentId { get; set; }
+        public ReservationState State { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<PaymentDto> Payments { get; set; }
+        public ApartmentListingDto Apartment { get; set; }
+        //public string ApartmentName { get; set; }
+        public decimal FullCost { get; set; }
+    }
+}
