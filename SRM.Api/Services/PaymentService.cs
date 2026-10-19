@@ -172,6 +172,13 @@ namespace SRM.Api.Services
                 var reservationQuery = await _db.Reservations.FindAsync(reservationId);
                 if (reservationQuery == null) return Result<PaymentWithUserEmailDto>.Fail("No se encontro la reserva");
                 reservation = reservationQuery;
+
+                // check for conflicting dates
+                var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId);
+                if (conflicting)
+                    return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas");
+
+                reservation.State = ReservationState.ConfirmedPaymentIncomplete; // lock down the reservation dates so nobody else takes them.
             }
             else
             {
@@ -185,7 +192,7 @@ namespace SRM.Api.Services
             var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: true);
             if (!paymentResult.Success)
             {
-                reservation.State = ReservationState.Cancelled;
+                reservation.State = ReservationState.NotConfirmed;
                 await _db.SaveChangesAsync();
                 return Result<PaymentWithUserEmailDto>.Fail(paymentResult.Error!);
             }
