@@ -35,7 +35,7 @@ namespace SRM.Api.Services
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
                     Payments = r.Payments.Select(p => p.ToDto()).ToList(),
-                    ApartmentName = r.Apartment.Name
+                    Apartment = new ApartmentListingDto(r.ApartmentId, r.Apartment.Name, r.Apartment.CoverImgUrl, r.Apartment.Location, r.Apartment.Price)
                 })
                 .FirstOrDefaultAsync();
 

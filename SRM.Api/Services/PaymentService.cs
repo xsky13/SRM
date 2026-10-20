@@ -145,7 +145,7 @@ namespace SRM.Api.Services
 
 
 
-        public async Task<Result<PaymentWithUserEmailDto>> ProcessFullPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid? userId = null)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessFullPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid? userId = null, Guid? reservationId = null)
         {
             if (request.CheckOutDate.Date < request.CheckInDate.Date)
                 return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
@@ -165,10 +165,19 @@ namespace SRM.Api.Services
                 userIdToUse = user.Id;
             }
 
-            // crear reserva con estado payment pending. ya verifica si las fechas son validas o no
-            var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userIdToUse);
-            if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
-            var reservation = reservationResult.Value;
+            // crear reserva con estado payment pending (si no existe todavia). ya verifica si las fechas son validas o no
+            Reservation reservation;
+            if (reservationId.HasValue)
+            {
+                var reservationQuery = await _db.Reservations.FindAsync(reservationId);
+                if (reservationQuery == null) return Result<PaymentWithUserEmailDto>.Fail("No se encontro la reserva");
+                reservation = reservationQuery;
+            } else
+            {
+                var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userIdToUse);
+                if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
+                reservation = reservationResult.Value;
+            }
 
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
 
@@ -203,7 +212,7 @@ namespace SRM.Api.Services
             return Result<PaymentWithUserEmailDto>.Ok(dto);
         }
 
-        public async Task<Result<PaymentWithUserEmailDto>> ProcessSignPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid userId)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessSignPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid userId, Guid? reservationId = null)
         {
             if (request.CheckOutDate.Date < request.CheckInDate.Date)
                 return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
@@ -216,9 +225,19 @@ namespace SRM.Api.Services
             /*Pasos*/
 
             // crear reserva con estado payment pending. ya verifica si las fechas son validas o no
-            var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userId);
-            if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
-            var reservation = reservationResult.Value!;
+            Reservation reservation;
+            if (reservationId.HasValue)
+            {
+                var reservationQuery = await _db.Reservations.FindAsync(reservationId);
+                if (reservationQuery == null) return Result<PaymentWithUserEmailDto>.Fail("No se encontro la reserva");
+                reservation = reservationQuery;
+            }
+            else
+            {
+                var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userId);
+                if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
+                reservation = reservationResult.Value;
+            }
 
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
 

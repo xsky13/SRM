@@ -70,11 +70,7 @@ namespace SRM.Api.Services
             return await _db.AppUsers.AnyAsync(u => u.Id == userId);
         }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> d5f049253b6cde1b9a661e081e9e4bdf10c3a565
+
         public async Task<Result<UserListingDto>> GetUser(Guid userId)
         {
             var user = await _db.AppUsers.FindAsync(userId);
@@ -82,9 +78,6 @@ namespace SRM.Api.Services
 
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
-<<<<<<< HEAD
->>>>>>> d5f049253b6cde1b9a661e081e9e4bdf10c3a565
-=======
->>>>>>> d5f049253b6cde1b9a661e081e9e4bdf10c3a565
+
     }
 }

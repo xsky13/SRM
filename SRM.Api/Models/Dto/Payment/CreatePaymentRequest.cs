@@ -20,6 +20,7 @@
         public int Installments { get; set; }
         public string Payment_Method_Id { get; set; }
         public Payer Payer { get; set; }
+        public Guid? ReservationId { get; set; } = null;
 
         public DateTime CheckInDate { get; set; }
             public DateTime CheckOutDate { get; set; }
