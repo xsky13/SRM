@@ -19,6 +19,6 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<Reservation>> CreateAuthReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
         public Task SaveChanges();
 
-        Task<Reservation> CancelReservationAsync(Guid reservationId, Guid userId);
+        public Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId);
     }
 }
