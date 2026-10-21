@@ -15,7 +15,6 @@ using System.Collections.Generic;
 using System.Text;
 
 
-
 namespace SRM.Api.Services
 {
     public class ReservationService(AppDbContext _db) : IReservationService
@@ -193,6 +192,50 @@ namespace SRM.Api.Services
         public async Task SaveChanges()
         {
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId)
+        {
+            var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+                return Result<Reservation>.Fail("Usuario no encontrado.", 401);
+
+            var reservation = await _db.Reservations
+                .Include(r => r.Payments)
+                .FirstOrDefaultAsync(r => r.Id == reservationId);
+            if (reservation == null)
+                return Result<Reservation>.Fail("No se encontró la reserva.", 404);
+
+            // dueño o el que hizo la reserva puede cancelarla
+            if (user.Usertype == UserType.Admin || reservation.AppUserId == userId)
+                return Result<Reservation>.Fail("No tenés permiso para cancelar esta reserva.", 403);
+
+            if (reservation.State == ReservationState.Cancelled)
+                return Result<Reservation>.Fail("La reserva ya está cancelada.", 400);
+
+            if (DateTime.UtcNow > reservation.CheckInDate.AddHours(-24))
+                return Result<Reservation>.Fail(
+                    $"No se puede cancelar: faltan menos de 24 hs para el check-in ({reservation.CheckInDate:dd/MM/yyyy HH:mm}).",
+                    400);
+
+            var pagosAprobados = reservation.Payments
+                .Where(p => p.PaymentStatus == PaymentStatus.Approved)
+                .ToList();
+
+            var senaRetenida = pagosAprobados.Where(p => p.IsSign).Sum(p => p.Amount);
+            var montoADevolver = pagosAprobados.Where(p => !p.IsSign).Sum(p => p.Amount);
+
+            //    Ejemplo para notificacion:
+            //    if (montoADevolver > 0)
+            //        await _notificationService.NotifyAdminRefundAsync(reservationId, montoADevolver);
+
+            // (soft delete)
+            reservation.State = ReservationState.Cancelled;
+            reservation.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            return Result<Reservation>.Ok(reservation);
         }
     }
 }
