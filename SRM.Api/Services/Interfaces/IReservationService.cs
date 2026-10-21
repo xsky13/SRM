@@ -19,6 +19,9 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<Reservation>> CreateAuthReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
         public Task SaveChanges();
 
-        Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestDto request, Guid reservationId, Guid userId);
+        Task<Result<Reservation>> ValidateReservation(DateTime newEndDate, DateTime newStartDate, Guid reservationId, Guid userId);
+
+        Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestNoPaymentDto request, Reservation reservation, Guid userId);
+        Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId);
     }
 }
