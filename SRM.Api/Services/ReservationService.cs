@@ -110,6 +110,11 @@ namespace SRM.Api.Services
 
         public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null)
         {
+            /*
+                excludeReservationId
+                Es para el momento de editar reserva propia. Si queremos buscar reservas ya confirmadas en las nuevas fechas seleccionadas, hay que exlcuir 
+                la reserva actual.
+             */
             var checkIn = checkInDate.Date;
             var checkOut = checkOutDate.Date;
             var effectiveCheckOut = checkOut == checkIn ? checkOut.AddDays(1) : checkOut;
@@ -194,104 +199,52 @@ namespace SRM.Api.Services
             return newPrice - totalPayed;
         }
 
-
-        public async Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestDto request, Guid reservationId, Guid userId)
+        public async Task<Result<Reservation>> ValidateReservation(DateTime newEndDate, DateTime newStartDate, Guid reservationId, Guid userId)
         {
-            if (request.NewEndDate.Date < request.NewStartDate.Date)
-                return Result<ReservationDetailDto>.Fail("La fecha de salida no puede ser anterior a la de entrada.");
-
             var reservation = await _db.Reservations
                 .Include(r => r.Apartment)
                 .FirstOrDefaultAsync(r => r.Id == reservationId);
+            if (reservation == null) return Result<Reservation>.Fail("La reserva no existe", 404);
 
-            if (reservation == null) return Result<ReservationDetailDto>.Fail("La reserva no existe", 404);
+            if (newEndDate.Date < newStartDate.Date)
+                return Result<Reservation>.Fail("La fecha de salida no puede ser anterior a la de entrada.");
 
-            if (reservation.AppUserId != userId) return Result<ReservationDetailDto>.Fail("Esta reserva no le pertenece.", 403);
+            if (reservation.AppUserId != userId) return Result<Reservation>.Fail("Esta reserva no le pertenece.", 403);
 
             // TODO: validar?
             // la reserva solo se puede modificar hasta 24 horas antes de que entre?
             var now = DateTime.UtcNow;
             var timePassed = reservation.CheckInDate - now;
-            if (timePassed.TotalHours < 24) return Result<ReservationDetailDto>.Fail("No puede modificar su reserva cuando faltan menos de 24 horas para que comienze.");
+            if (timePassed.TotalHours < 24) return Result<Reservation>.Fail("No puede modificar su reserva cuando faltan menos de 24 horas para que comienze.");
 
             // checkear fechas
-            var datesInvalid = await DatesAreInvalid(request.NewEndDate, request.NewStartDate, reservation.ApartmentId, reservationId);
-            if (datesInvalid) return Result<ReservationDetailDto>.Fail("Fechas invalidas.");
+            var datesInvalid = await DatesAreInvalid(newEndDate, newStartDate, reservation.ApartmentId, reservation.Id);
+            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas.");
 
-            var oldDays = Nights(reservation.CheckInDate, reservation.CheckOutDate);
-            var newDays = Nights(request.NewStartDate, request.NewEndDate);
-            var newPrice = reservation.Apartment.Price * newDays;
-            var oldPrice = reservation.Apartment.Price * oldDays;
-
-            if (newDays <= oldDays && reservation.State == ReservationState.ConfirmedPaymentComplete)
-            {
-                // ya fue hecho todo el pago, notificar al administrador que debe compensar al usuario con la diferencia
-                var owed = oldPrice - newPrice;
-
-                // mandar notificacion al admin con el precio que le debe 
-
-
-                reservation.CheckInDate = request.NewStartDate;
-                reservation.CheckOutDate = request.NewEndDate;
-                reservation.State = ReservationState.ConfirmedPaymentComplete;
-                await _db.SaveChangesAsync();
-
-                return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
-            }
-            else if (newDays > oldDays && reservation.State != ReservationState.Cancelled && reservation.State != ReservationState.PaymentPending)
-            {
-                // el usuario selecciono mas tiempo, y la reserva esta no confirmada o solo con la sena pagada.
-                // debe pagar el nuevo costo completo para continuar
-
-                var amount = await (reservation.State switch
-                {
-                    ReservationState.NotConfirmed => Task.FromResult(newPrice),
-                    ReservationState.ConfirmedPaymentIncomplete or ReservationState.ConfirmedPaymentComplete => UnpaidAmount(reservationId, newPrice),
-                    _ => Task.FromResult(newPrice)
-                });
-
-                CreatePaymentRequest paymentRequest = new()
-                {
-                    TransactionAmount = amount,
-                    Token = request.Token,
-                    Installments = request.Installments,
-                    Payment_Method_Id = request.Payment_Method_Id,
-                    Payer = request.Payer,
-                    ReservationId = request.ReservationId,
-                    CheckInDate = request.NewStartDate,
-                    CheckOutDate = request.NewEndDate
-                };
-                var paymentResult = await _bankService.CreatePayment(paymentRequest, amount, userId, reservationId, "", isSign: false); // TODO: resolver idempotency (later)
-                if (!paymentResult.Success) return Result<ReservationDetailDto>.Fail(paymentResult.Error!);
-                var payment = paymentResult.Value!;
-
-                switch (payment.PaymentStatus)
-                {
-                    case Models.Enums.PaymentStatus.Approved:
-                        reservation.CheckInDate = request.NewStartDate;
-                        reservation.CheckOutDate = request.NewEndDate;
-                        reservation.State = ReservationState.ConfirmedPaymentComplete;
-                        reservation.UpdatedAt = DateTime.UtcNow;
-                        await _db.SaveChangesAsync();
-                        return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
-
-                    case Models.Enums.PaymentStatus.Rejected or Models.Enums.PaymentStatus.Cancelled:
-                        await _db.SaveChangesAsync(); // registra el intento fallido
-                        return Result<ReservationDetailDto>.Fail("El pago fue rechazado. Sus fechas no fueron modificadas.");
-
-                    default: // Pending, in_process, authorized
-                        payment.PendingCheckInDate = request.NewStartDate;
-                        payment.PendingCheckOutDate = request.NewEndDate;
-                        await _db.SaveChangesAsync();
-                        // la reserva queda con las fechas viejas; el webhook las aplica si el pago se aprueba
-                        return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
-                }
-
-                return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
-            }
-            else return Result<ReservationDetailDto>.Fail("Su reserva esta cancelada o con un pago pendiente. Por favor, espere un momento e intente de nuevo. Si el error persiste, contactese con un administrador.");
+            return Result<Reservation>.Ok(reservation);
         }
 
+
+        public async Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestNoPaymentDto request, Reservation reservation, Guid userId)
+        {
+            reservation.CheckInDate = request.NewStartDate;
+            reservation.CheckOutDate = request.NewEndDate;
+            reservation.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            if (reservation.State == ReservationState.ConfirmedPaymentComplete)
+            {
+                // notificar al administrador y usuario
+            }
+
+            return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+        }
+
+        public Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId)
+        {
+            throw new NotImplementedException();
+        }
+        
     }
 }
 
