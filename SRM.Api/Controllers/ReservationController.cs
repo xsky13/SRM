@@ -107,7 +107,7 @@ namespace SRM.Api.Controllers
             var oldSpan = reservation.CheckOutDate.Subtract(reservation.CheckInDate);
 
             // hay menos tiempo
-            if (newSpan < oldSpan)
+            if (newSpan <= oldSpan)
             {
                 var result = await _reservationService.EditOwnReservation(request, reservation, userGuid);
                 return result.ToActionResult();
