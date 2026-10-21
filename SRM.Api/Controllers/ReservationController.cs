@@ -156,5 +156,26 @@ namespace SRM.Api.Controllers
             return result.ToActionResult();
         }
 
+
+        [HttpPost("cancel/{reservationId}")]
+        public async Task<ActionResult<Reservation>> CancelReservation(Guid reservationId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (userId == null)
+                return Unauthorized();
+            
+            var userGuid = Guid.Empty;
+            
+            if (!Guid.TryParse(userId, out userGuid))
+                return BadRequest("Id invalido.");
+            
+            if (!await _userService.UserExists(userGuid))
+                return BadRequest("Usuario no encontrado.");
+            
+            var response = await _reservationService.CancelReservation(reservationId, userGuid);
+            
+            return response.ToActionResult();
+        }
     }
 }
