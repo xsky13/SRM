@@ -240,8 +240,68 @@ namespace SRM.Api.Services
             return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
 
-        public Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId)
+        public async Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId)
         {
+            // esta confirmado por el controlador que el estado de la reserva es o confirmedpaymentincomplete o confirmedpaymentcomplete, y que las fechas de la reserva son validas
+            var totalPayed = await _db.Payments
+                .Where(p => p.ReservationId == reservation.Id)
+                .SumAsync(p => p.Amount);
+            
+
+            /*
+             Conseguir nuevo costo total
+             */
+            decimal apartmentCost = await _db.Apartments
+                .Where(a => a.Id == reservation.ApartmentId)
+                .Select(a => a.Price)
+                .FirstOrDefaultAsync();
+
+            if (apartmentCost == 0) // no se encontro el departamento
+                return Result<ReservationDetailDto>.Fail("El departamento para los pagos no existe.");
+
+            var nights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var fullCost = nights * apartmentCost;
+            var amount = fullCost - totalPayed; // diferencia entre lo pagado y el nuevo total
+
+            /*
+                Pagar
+             */
+            CreatePaymentRequest paymentRequest = new()
+            {
+                TransactionAmount = amount,
+                Token = request.Token,
+                Installments = request.Installments,
+                Payment_Method_Id = request.Payment_Method_Id,
+                Payer = request.Payer,
+                ReservationId = request.ReservationId,
+                CheckInDate = request.NewStartDate,
+                CheckOutDate = request.NewEndDate
+            };
+            var paymentResult = await _bankService.CreatePayment(paymentRequest, amount, userId, reservation.Id, "", isSign: false); // TODO: resolver idempotency (later)
+            if (!paymentResult.Success) return Result<ReservationDetailDto>.Fail(paymentResult.Error!);
+            var payment = paymentResult.Value!;
+
+            switch (payment.PaymentStatus)
+            {
+                case Models.Enums.PaymentStatus.Approved:
+                    reservation.CheckInDate = request.NewStartDate;
+                    reservation.CheckOutDate = request.NewEndDate;
+                    reservation.State = ReservationState.ConfirmedPaymentComplete;
+                    reservation.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                    return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+
+                case Models.Enums.PaymentStatus.Rejected or Models.Enums.PaymentStatus.Cancelled:
+                    await _db.SaveChangesAsync(); // registra el intento fallido
+                    return Result<ReservationDetailDto>.Fail("El pago fue rechazado. Sus fechas no fueron modificadas.");
+
+                default: // Pending, in_process, authorized
+                    payment.PendingCheckInDate = request.NewStartDate;
+                    payment.PendingCheckOutDate = request.NewEndDate;
+                    await _db.SaveChangesAsync();
+                    // la reserva queda con las fechas viejas; el webhook las aplica si el pago se aprueba
+                    return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+            }
             throw new NotImplementedException();
         }
         
