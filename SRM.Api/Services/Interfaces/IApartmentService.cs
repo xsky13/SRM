@@ -1,4 +1,5 @@
 ﻿using SRM.Api.Models.Dto.Apartment;
+using SRM.Api.Models.Entities;
 using SRM.Api.Utils;
 
 namespace SRM.Api.Services.Interfaces
@@ -7,5 +8,6 @@ namespace SRM.Api.Services.Interfaces
     {
         Task<Result<List<ApartmentListingDto>>> GetAll(int limit = 10);
         Task<Result<ApartmentDetailsDto>> GetById(Guid id);
+        Task<Result<Apartment>> CreateApartmentAsync(CreateApartmentDto dto);
     }
 }
