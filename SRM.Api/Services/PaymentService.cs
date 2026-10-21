@@ -55,6 +55,13 @@ namespace SRM.Api.Services
                     _ => reservation.State
                 };
 
+                if (newStatus == PaymentStatus.Approved && payment.PendingCheckInDate != null && payment.PendingCheckOutDate != null)
+                {
+                    reservation.CheckInDate = payment.PendingCheckInDate.Value;
+                    reservation.CheckOutDate = payment.PendingCheckOutDate.Value;
+                    reservation.UpdatedAt = DateTime.UtcNow;
+                }
+
                 // buscar pagos 
                 var payments = await _db.Payments
                     .Where(p => p.ReservationId == reservation.Id)
