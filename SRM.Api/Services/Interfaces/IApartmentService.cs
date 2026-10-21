@@ -9,6 +9,9 @@ namespace SRM.Api.Services.Interfaces
         Task<Result<List<ApartmentListingDto>>> GetAll(int limit = 10);
         Task<Result<ApartmentDetailsDto>> GetById(Guid id);
         Task<Result<Apartment>> CreateApartmentAsync(CreateApartmentDto dto);
+        Task<Result<Apartment>> UpdateApartmentAsync(Guid id, UpdateApartmentDto dto);
+        Task<Result<List<Models.Dto.Images.ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto);
+        Task<Result<bool>> RemoveImagesAsync(Guid id, RemoveImagesDto dto);
         Task<Result<Apartment>> DeleteApartmentAsync(Guid id);
     }
 }

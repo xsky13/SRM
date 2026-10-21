@@ -45,7 +45,6 @@ namespace SRM.Api.Controllers
             var response = await _apartmentService.CreateApartmentAsync(request);
             return response.ToActionResult();
         }
-
         [Authorize]
         [HttpDelete("{id}")]
         public async Task<ActionResult<Apartment>> DeleteApartment(Guid id)
@@ -58,5 +57,46 @@ namespace SRM.Api.Controllers
             var response = await _apartmentService.DeleteApartmentAsync(id);
             return response.ToActionResult();
         }
+
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<ActionResult<Apartment>> UpdateApartment(Guid id, [FromBody] UpdateApartmentDto request)
+        {
+            // Validar que el usuario sea administrador
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            // Llamar al servicio
+            var response = await _apartmentService.UpdateApartmentAsync(id, request);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpPost("{id}/images")]
+        public async Task<ActionResult<List<Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromBody] AddImagesDto request)
+        {
+            // Validar que el usuario sea administrador
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            // Llamar al servicio
+            var response = await _apartmentService.AddImagesAsync(id, request);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpDelete("{id}/images")]
+        public async Task<ActionResult<bool>> RemoveImages(Guid id, [FromBody] RemoveImagesDto request)
+        {
+            // Validar que el usuario sea administrador
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            // Llamar al servicio
+            var response = await _apartmentService.RemoveImagesAsync(id, request);
+            return response.ToActionResult();
+        }
+
+
     }
 }

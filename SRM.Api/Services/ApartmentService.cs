@@ -106,6 +106,144 @@ namespace SRM.Api.Services
             return Result<Apartment>.Ok(apartment);
         }
 
+        public async Task<Result<Apartment>> UpdateApartmentAsync(Guid id, UpdateApartmentDto dto)
+        {
+            // Buscar el departamento
+            var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
+
+            if (apartment == null)
+                return Result<Apartment>.Fail("No se encontró el departamento", 404);
+
+            // Validar que no esté eliminado
+            if (apartment.IsDeleted)
+                return Result<Apartment>.Fail("No se encontró el departamento", 404);
+
+            // Actualizar campos si no son nulos
+            if (!string.IsNullOrWhiteSpace(dto.Name))
+            {
+                if (dto.Name.Length < 3 || dto.Name.Length > 100)
+                    return Result<Apartment>.Fail("El nombre del departamento debe tener entre 3 y 100 caracteres.", 400);
+                apartment.Name = dto.Name;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+            {
+                if (dto.Description.Length < 10 || dto.Description.Length > 1000)
+                    return Result<Apartment>.Fail("La descripción debe tener entre 10 y 1000 caracteres.", 400);
+                apartment.Description = dto.Description;
+            }
+
+            if (dto.Price.HasValue)
+            {
+                if (dto.Price <= 0)
+                    return Result<Apartment>.Fail("El precio debe ser mayor a 0.", 400);
+                apartment.Price = dto.Price.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Location))
+            {
+                if (dto.Location.Length < 5 || dto.Location.Length > 100)
+                    return Result<Apartment>.Fail("La ubicación debe tener entre 5 y 100 caracteres.", 400);
+                apartment.Location = dto.Location;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.CoverImgUrl))
+            {
+                apartment.CoverImgUrl = dto.CoverImgUrl;
+            }
+
+            _db.Apartments.Update(apartment);
+            await _db.SaveChangesAsync();
+
+            return Result<Apartment>.Ok(apartment);
+        }
+
+        public async Task<Result<List<Models.Dto.Images.ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto)
+        {
+            // Buscar el departamento
+            var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
+
+            if (apartment == null)
+                return Result<List<Models.Dto.Images.ImageDto>>.Fail("No se encontró el departamento", 404);
+
+            // Validar que no esté eliminado
+            if (apartment.IsDeleted)
+                return Result<List<Models.Dto.Images.ImageDto>>.Fail("No se encontró el departamento", 404);
+
+            // Validar que al menos hay una URL
+            if (dto.ImageUrls == null || dto.ImageUrls.Count == 0)
+                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Debe proporcionar al menos una URL de imagen.", 400);
+
+            // Crear nuevas imágenes
+            var newImages = new List<Image>();
+            foreach (var url in dto.ImageUrls)
+            {
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    var image = new Image
+                    {
+                        Id = Guid.NewGuid(),
+                        Url = url,
+                        ApartmentId = id
+                    };
+                    newImages.Add(image);
+                    _db.Images.Add(image);
+                }
+            }
+
+            if (newImages.Count == 0)
+                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Debe proporcionar al menos una URL de imagen válida.", 400);
+
+            await _db.SaveChangesAsync();
+
+            // Retornar las imágenes creadas como DTOs
+            var imageDtos = newImages.Select(i => new Models.Dto.Images.ImageDto(i.Id, i.Url, i.ApartmentId)).ToList();
+            return Result<List<Models.Dto.Images.ImageDto>>.Ok(imageDtos);
+        }
+
+        public async Task<Result<bool>> RemoveImagesAsync(Guid id, RemoveImagesDto dto)
+        {
+            // Buscar el departamento
+            var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
+
+            if (apartment == null)
+                return Result<bool>.Fail("No se encontró el departamento", 404);
+
+            // Validar que not esté eliminado
+            if (apartment.IsDeleted)
+                return Result<bool>.Fail("No se encontró el departamento", 404);
+
+            // Validar que hay IDs para eliminar
+            if (dto.ImageIds == null || dto.ImageIds.Count == 0)
+                return Result<bool>.Fail("Debe proporcionar al menos un ID de imagen.", 400);
+
+            // Obtener las imágenes a eliminar
+            var imagesToDelete = await _db.Images
+                .Where(i => dto.ImageIds.Contains(i.Id) && i.ApartmentId == id)
+                .ToListAsync();
+
+            // Validar que todas las imágenes solicitadas pertenecen al departamento
+            if (imagesToDelete.Count != dto.ImageIds.Count)
+            {
+                var notFound = dto.ImageIds
+                    .Where(id => !imagesToDelete.Any(i => i.Id == id))
+                    .ToList();
+                return Result<bool>.Fail($"Las siguientes imágenes no pertenecen al departamento o no existen: {string.Join(", ", notFound)}", 400);
+            }
+
+            // Realizar soft delete de las imágenes
+            foreach (var image in imagesToDelete)
+            {
+                image.IsDeleted = true;
+                image.DeletedOnUTC = DateTime.UtcNow;
+                _db.Images.Update(image);
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Result<bool>.Ok(true);
+        }
+
         public async Task<Result<Apartment>> DeleteApartmentAsync(Guid id)
         {
             // Buscar el departamento
