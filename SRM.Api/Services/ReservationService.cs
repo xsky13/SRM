@@ -206,8 +206,8 @@ namespace SRM.Api.Services
             if (reservation == null)
                 return Result<Reservation>.Fail("No se encontró la reserva.", 404);
 
-            // 3. Permisos: debe ser el dueño O un administrador
-            if (user.Usertype != UserType.Admin && reservation.AppUserId != userId)
+            // dueño o el que hizo la reserva puede cancelarla
+            if (user.Usertype == UserType.Admin || reservation.AppUserId == userId)
                 return Result<Reservation>.Fail("No tenés permiso para cancelar esta reserva.", 403);
 
             if (reservation.State == ReservationState.Cancelled)
