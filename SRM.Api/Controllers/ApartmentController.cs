@@ -45,5 +45,18 @@ namespace SRM.Api.Controllers
             var response = await _apartmentService.CreateApartmentAsync(request);
             return response.ToActionResult();
         }
+
+        [Authorize]
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<Apartment>> DeleteApartment(Guid id)
+        {
+            // Validar que el usuario sea administrador
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            // Llamar al servicio para eliminar (soft delete)
+            var response = await _apartmentService.DeleteApartmentAsync(id);
+            return response.ToActionResult();
+        }
     }
 }

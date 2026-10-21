@@ -106,6 +106,25 @@ namespace SRM.Api.Services
             return Result<Apartment>.Ok(apartment);
         }
 
+        public async Task<Result<Apartment>> DeleteApartmentAsync(Guid id)
+        {
+            // Buscar el departamento
+            var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
 
+            if (apartment == null)
+                return Result<Apartment>.Fail("No se encontró el departamento", 404);
+
+            if (apartment.IsDeleted)
+                return Result<Apartment>.Fail("El departamento ya ha sido eliminado", 410);
+
+            // Realizar soft delete
+            apartment.IsDeleted = true;
+            apartment.DeletedOnUTC = DateTime.UtcNow;
+
+            _db.Apartments.Update(apartment);
+            await _db.SaveChangesAsync();
+
+            return Result<Apartment>.Ok(apartment);
+        }
     }
 }
