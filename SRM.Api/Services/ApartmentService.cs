@@ -5,11 +5,20 @@ using SRM.Api.Models.Entities;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using SRM.Api.Models.Enums;
+using Microsoft.Extensions.Hosting; // Nueva directiva usando agregada
 
 namespace SRM.Api.Services
 {
-    public class ApartmentService(AppDbContext _db) : IApartmentService
+    public class ApartmentService : IApartmentService
     {
+        private readonly AppDbContext _db;
+        private readonly IHostEnvironment _env; // O IWebHostEnvironment
+
+        public ApartmentService(AppDbContext db, IHostEnvironment env) // O IWebHostEnvironment
+        {
+            _db = db;
+            _env = env;
+        }
 
         public async Task<Result<List<ApartmentListingDto>>> GetAll(int limit = 10)
         {
@@ -160,39 +169,51 @@ namespace SRM.Api.Services
 
         public async Task<Result<List<Models.Dto.Images.ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto)
         {
-            // Buscar el departamento
             var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
 
             if (apartment == null)
                 return Result<List<Models.Dto.Images.ImageDto>>.Fail("No se encontró el departamento", 404);
 
-            // Validar que no esté eliminado
             if (apartment.IsDeleted)
                 return Result<List<Models.Dto.Images.ImageDto>>.Fail("No se encontró el departamento", 404);
 
-            // Validar que al menos hay una URL
-            if (dto.ImageUrls == null || dto.ImageUrls.Count == 0)
-                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Debe proporcionar al menos una URL de imagen.", 400);
+            if (dto.Images == null || dto.Images.Count == 0)
+                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Debe proporcionar al menos una imagen.", 400);
+
+            // 1. Definir la ruta física donde se guardarán las imágenes en el contenedor
+            var imagesPath = Path.Combine(_env.ContentRootPath, "Storage", "Images");
 
             // Crear nuevas imágenes
             var newImages = new List<Image>();
-            foreach (var url in dto.ImageUrls)
+            foreach (var imageFile in dto.Images)
             {
-                if (!string.IsNullOrWhiteSpace(url))
+                if (imageFile != null && imageFile.Length > 0)
                 {
+                    // 2. Generar un nombre único (GUID) y mantener la extensión (.jpg, .png, etc.)
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+                    var filePath = Path.Combine(imagesPath, fileName);
+
+                    // 3. Guardar el archivo físicamente en el volumen del contenedor
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await imageFile.CopyToAsync(stream);
+                    }
+
+                    // 4. Crear la entidad con la URL virtual (string) para la Base de Datos
                     var image = new Image
                     {
                         Id = Guid.NewGuid(),
-                        Url = url,
+                        Url = $"/images/{fileName}", // Aquí generamos el string que guardará en la BD
                         ApartmentId = id
                     };
+
                     newImages.Add(image);
                     _db.Images.Add(image);
                 }
             }
 
             if (newImages.Count == 0)
-                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Debe proporcionar al menos una URL de imagen válida.", 400);
+                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Las imágenes proporcionadas no son válidas o están vacías.", 400);
 
             await _db.SaveChangesAsync();
 
@@ -203,13 +224,11 @@ namespace SRM.Api.Services
 
         public async Task<Result<bool>> RemoveImagesAsync(Guid id, RemoveImagesDto dto)
         {
-            // Buscar el departamento
             var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
 
             if (apartment == null)
                 return Result<bool>.Fail("No se encontró el departamento", 404);
 
-            // Validar que not esté eliminado
             if (apartment.IsDeleted)
                 return Result<bool>.Fail("No se encontró el departamento", 404);
 
@@ -217,7 +236,6 @@ namespace SRM.Api.Services
             if (dto.ImageIds == null || dto.ImageIds.Count == 0)
                 return Result<bool>.Fail("Debe proporcionar al menos un ID de imagen.", 400);
 
-            // Obtener las imágenes a eliminar
             var imagesToDelete = await _db.Images
                 .Where(i => dto.ImageIds.Contains(i.Id) && i.ApartmentId == id)
                 .ToListAsync();
@@ -226,14 +244,35 @@ namespace SRM.Api.Services
             if (imagesToDelete.Count != dto.ImageIds.Count)
             {
                 var notFound = dto.ImageIds
-                    .Where(id => !imagesToDelete.Any(i => i.Id == id))
+                    .Where(imageId => !imagesToDelete.Any(i => i.Id == imageId))
                     .ToList();
                 return Result<bool>.Fail($"Las siguientes imágenes no pertenecen al departamento o no existen: {string.Join(", ", notFound)}", 400);
             }
 
-            // Realizar soft delete de las imágenes
+            // Obtener la ruta de la carpeta de imágenes en Docker
+            var imagesPath = Path.Combine(_env.ContentRootPath, "Storage", "Images");
+
+            // soft delete de las imágenes y borrado físico
             foreach (var image in imagesToDelete)
             {
+                // 1. Borrar el archivo físico del disco
+                var fileName = Path.GetFileName(image.Url); // Extrae "foto.jpg" de "/images/foto.jpg"
+                var filePath = Path.Combine(imagesPath, fileName);
+
+                if (File.Exists(filePath))
+                {
+                    try
+                    {
+                        File.Delete(filePath);
+                    }
+                    catch (IOException)
+                    {
+                        // Si el archivo está siendo usado por otro proceso, ignoramos el error
+                        // para que no falle la eliminación en la base de datos.
+                    }
+                }
+
+                // 2. Hacer el soft delete en la Base de Datos
                 image.IsDeleted = true;
                 image.DeletedOnUTC = DateTime.UtcNow;
                 _db.Images.Update(image);

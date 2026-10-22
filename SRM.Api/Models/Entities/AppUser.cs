@@ -29,6 +29,7 @@ namespace SRM.Api.Models.Entities
                 Telefono = Telefono,
                 Email = Email,
                 PwdHash = PwdHash,
+                Usertype = Usertype
             };
         }
 

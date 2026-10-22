@@ -45,6 +45,7 @@ namespace SRM.Api.Controllers
             var response = await _apartmentService.CreateApartmentAsync(request);
             return response.ToActionResult();
         }
+
         [Authorize]
         [HttpDelete("{id}")]
         public async Task<ActionResult<Apartment>> DeleteApartment(Guid id)
@@ -73,14 +74,14 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpPost("{id}/images")]
-        public async Task<ActionResult<List<Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromBody] AddImagesDto request)
+        public async Task<ActionResult<List<Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromForm] AddImagesDto request)
         {
-            // Validar que el usuario sea administrador
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();
 
-            // Llamar al servicio
             var response = await _apartmentService.AddImagesAsync(id, request);
+
+            // Al devolver esto, el tipo coincide perfectamente con la firma del método
             return response.ToActionResult();
         }
 
