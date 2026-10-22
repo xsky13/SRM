@@ -16,6 +16,7 @@ namespace SRM.Api.Models.Entities
         // para editar pagos
         public DateTime? PendingCheckInDate { get; set; }
         public DateTime? PendingCheckOutDate { get; set; }
+        public ReservationState? PreviousReservationState { get; set; }
 
         public Guid ReservationId { get; set; }
         public Reservation Reservation { get; set; } = null!;

@@ -87,63 +87,48 @@ namespace SRM.Api.Controllers
         [HttpPut("{reservationId}")]
         public async Task<ActionResult<ReservationDetailDto>> EditOwnReservation([FromBody] EditOwnReservationRequestNoPaymentDto request, Guid reservationId)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
 
-            if (userId == null)
-                return Unauthorized();
-
-            if (!Guid.TryParse(userId, out var userGuid))
-                return BadRequest("Id invalido.");
-
-            if (!await _userService.UserExists(userGuid))
+            if (!await _userService.UserExists(userId.Value))
                 return BadRequest("Usuario no encontrado.");
 
-            var reservationValidation = await _reservationService.ValidateReservation(request.NewEndDate, request.NewStartDate, reservationId, userGuid);
-            if (!reservationValidation.Success) return BadRequest(reservationValidation.Error!);
+            var reservationValidation = await _reservationService.ValidateReservation(request.NewEndDate, request.NewStartDate, reservationId, userId.Value);
+            if (!reservationValidation.Success) return StatusCode(reservationValidation.StatusCode, new { Message = reservationValidation.Error! });
             var reservation = reservationValidation.Value!;
 
             // cuanto tiempo hay a comparacion de la reserva actual?
-            var newSpan = request.NewEndDate.Subtract(request.NewStartDate);
-            var oldSpan = reservation.CheckOutDate.Subtract(reservation.CheckInDate);
+            var newNights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var oldNights = Math.Max((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days, 1);
 
             // hay menos tiempo
-            if (newSpan <= oldSpan)
+            if (newNights <= oldNights)
             {
-                var result = await _reservationService.EditOwnReservation(request, reservation, userGuid);
+                var result = await _reservationService.EditOwnReservation(request, reservation, userId.Value);
                 return result.ToActionResult();
             }
-            else // hay mas tiempo
+
+            if (reservation.State == Models.Enums.ReservationState.NotConfirmed)
             {
-                // cual es el estado de la reserva?
-                switch (reservation.State)
-                {
-                    case Models.Enums.ReservationState.NotConfirmed:
-                        var result = await _reservationService.EditOwnReservation(request, reservation, userGuid);
-                        return result.ToActionResult();
-                    case Models.Enums.ReservationState.PaymentPending:
-                        return BadRequest("Hay pagos pendientes");
-                    default:
-                        return BadRequest("Estado de reserva invalido para este caso"); // reservation state was either cancelled, or there is a payment, in which case it will be handled by the other method
-                }
+                var result = await _reservationService.EditOwnReservation(request, reservation, userId.Value);
+                return result.ToActionResult();
             }
+
+            // no hay ningun otro caso que resolver en este camino
+            return BadRequest("Estado de reserva invalido para este caso");
         }
 
         [HttpPut("{reservationId}/full")]
         public async Task<ActionResult<ReservationDetailDto>> EditOwnReservationFull([FromBody] EditOwnReservationRequestPaymentDto request, Guid reservationId)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
 
-            if (userId == null)
-                return Unauthorized();
-
-            if (!Guid.TryParse(userId, out var userGuid))
-                return BadRequest("Id invalido.");
-
-            if (!await _userService.UserExists(userGuid))
+            if (!await _userService.UserExists(userId.Value))
                 return BadRequest("Usuario no encontrado.");
 
-            var reservationValidation = await _reservationService.ValidateReservation(request.NewEndDate, request.NewStartDate, reservationId, userGuid);
-            if (!reservationValidation.Success) return BadRequest(reservationValidation.Error!);
+            var reservationValidation = await _reservationService.ValidateReservation(request.NewEndDate, request.NewStartDate, reservationId, userId.Value);
+            if (!reservationValidation.Success) return StatusCode(reservationValidation.StatusCode, new { Message = reservationValidation.Error! });
             var reservation = reservationValidation.Value!;
 
             /*
@@ -152,7 +137,21 @@ namespace SRM.Api.Controllers
             if (reservation.State != Models.Enums.ReservationState.ConfirmedPaymentComplete && reservation.State != Models.Enums.ReservationState.ConfirmedPaymentIncomplete)
                 return BadRequest("Esta reserva no esta confirmada.");
 
-            var result = await _reservationService.EditOwnReservationFull(request, reservation, userGuid);
+            var newNights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var oldNights = Math.Max((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days, 1);
+
+            // hay menos tiempo (verificar por la dudas)
+            if (newNights <= oldNights)
+            {
+                var editResult = await _reservationService.EditOwnReservation(new EditOwnReservationRequestNoPaymentDto
+                {
+                    NewEndDate = request.NewEndDate,
+                    NewStartDate = request.NewStartDate
+                }, reservation, userId.Value);
+                return editResult.ToActionResult();
+            }
+
+            var result = await _reservationService.EditOwnReservationFull(request, reservation, userId.Value);
             return result.ToActionResult();
         }
 
@@ -161,20 +160,20 @@ namespace SRM.Api.Controllers
         public async Task<ActionResult<Reservation>> CancelReservation(Guid reservationId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (userId == null)
                 return Unauthorized();
-            
+
             var userGuid = Guid.Empty;
-            
+
             if (!Guid.TryParse(userId, out userGuid))
                 return BadRequest("Id invalido.");
-            
+
             if (!await _userService.UserExists(userGuid))
                 return BadRequest("Usuario no encontrado.");
-            
+
             var response = await _reservationService.CancelReservation(reservationId, userGuid);
-            
+
             return response.ToActionResult();
         }
     }

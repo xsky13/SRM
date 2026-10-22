@@ -51,7 +51,7 @@ namespace SRM.Api.Services
                 reservation.State = newStatus switch
                 {
                     PaymentStatus.Approved => ReservationState.ConfirmedPaymentComplete,
-                    PaymentStatus.Rejected or PaymentStatus.Cancelled => ReservationState.Cancelled,
+                    PaymentStatus.Rejected or PaymentStatus.Cancelled => payment.PreviousReservationState ?? ReservationState.Cancelled,
                     _ => reservation.State
                 };
 

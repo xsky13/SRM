@@ -208,7 +208,13 @@ namespace SRM.Api.Services
             if (newEndDate.Date < newStartDate.Date)
                 return Result<Reservation>.Fail("La fecha de salida no puede ser anterior a la de entrada.");
 
+            if (newStartDate.Date < DateTime.UtcNow.Date)
+                return Result<Reservation>.Fail("La nueva fecha de entrada no puede estar en el pasado.");
+
             if (reservation.AppUserId != userId) return Result<Reservation>.Fail("Esta reserva no le pertenece.", 403);
+
+            if (reservation.State == ReservationState.Cancelled || reservation.State == ReservationState.PaymentPending)
+                return Result<Reservation>.Fail("Esta reserva no se puede modificar. Hay un pago pendiente o esta cancelada.");
 
             // TODO: validar?
             // la reserva solo se puede modificar hasta 24 horas antes de que entre?
@@ -243,7 +249,7 @@ namespace SRM.Api.Services
         {
             // esta confirmado por el controlador que el estado de la reserva es o confirmedpaymentincomplete o confirmedpaymentcomplete, y que las fechas de la reserva son validas
             var totalPayed = await _db.Payments
-                .Where(p => p.ReservationId == reservation.Id)
+                .Where(p => p.ReservationId == reservation.Id && p.PaymentStatus == Models.Enums.PaymentStatus.Approved)
                 .SumAsync(p => p.Amount);
             
 
@@ -262,6 +268,9 @@ namespace SRM.Api.Services
             var fullCost = nights * apartmentCost;
             var amount = fullCost - totalPayed; // diferencia entre lo pagado y el nuevo total
 
+            if (amount <= 0)
+                return Result<ReservationDetailDto>.Fail("No hay nada para cobrar con estas fechas.");
+
             /*
                 Pagar
              */
@@ -272,7 +281,7 @@ namespace SRM.Api.Services
                 Installments = request.Installments,
                 Payment_Method_Id = request.Payment_Method_Id,
                 Payer = request.Payer,
-                ReservationId = request.ReservationId,
+                ReservationId = reservation.Id,
                 CheckInDate = request.NewStartDate,
                 CheckOutDate = request.NewEndDate
             };
@@ -297,11 +306,13 @@ namespace SRM.Api.Services
                 default: // Pending, in_process, authorized
                     payment.PendingCheckInDate = request.NewStartDate;
                     payment.PendingCheckOutDate = request.NewEndDate;
+                    payment.PreviousReservationState = reservation.State;
+                    reservation.State = ReservationState.PaymentPending;
+                    reservation.UpdatedAt = DateTime.UtcNow;
                     await _db.SaveChangesAsync();
                     // la reserva queda con las fechas viejas; el webhook las aplica si el pago se aprueba
                     return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
             }
-            throw new NotImplementedException();
         }
         
 
@@ -330,7 +341,7 @@ namespace SRM.Api.Services
                     400);
 
             var pagosAprobados = reservation.Payments
-                .Where(p => p.PaymentStatus == PaymentStatus.Approved)
+                .Where(p => p.PaymentStatus == Models.Enums.PaymentStatus.Approved)
                 .ToList();
 
             var senaRetenida = pagosAprobados.Where(p => p.IsSign).Sum(p => p.Amount);
