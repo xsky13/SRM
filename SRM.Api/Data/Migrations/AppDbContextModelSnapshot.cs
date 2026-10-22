@@ -172,6 +172,9 @@ namespace SRM.Api.Data.Migrations
                     b.Property<DateTime?>("PendingCheckOutDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("PreviousReservationState")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("ReservationId")
                         .HasColumnType("uuid");
 
