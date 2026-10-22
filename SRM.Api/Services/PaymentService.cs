@@ -1,8 +1,4 @@
-﻿using MercadoPago.Client;
-using MercadoPago.Client.Common;
-using MercadoPago.Client.Payment;
-using MercadoPago.Client.Preference;
-using MercadoPago.Resource.Preference;
+﻿using MercadoPago.Client.Payment;
 using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Payment;
@@ -127,6 +123,10 @@ namespace SRM.Api.Services
                 reservation = reservationResult.Value;
             }
 
+            // validar que no haya ningun pago pendiente
+            if (reservation.State == ReservationState.PaymentPending)
+                return Result<PaymentWithUserEmailDto>.Fail("Hay pagos pendientes para esta reserva.");
+
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
 
             var paymentResult = await _bankService.CreatePayment(request, amount, userIdToUse, reservation.Id, idempotencyKey, isSign: false);
@@ -179,6 +179,11 @@ namespace SRM.Api.Services
                 var reservationQuery = await _db.Reservations.FindAsync(reservationId);
                 if (reservationQuery == null) return Result<PaymentWithUserEmailDto>.Fail("No se encontro la reserva");
                 reservation = reservationQuery;
+
+                // just in case
+                // validar que no haya ningun pago pendiente
+                if (reservation.State == ReservationState.PaymentPending)
+                    return Result<PaymentWithUserEmailDto>.Fail("Hay pagos pendientes para esta reserva.");
 
                 // check for conflicting dates
                 var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId);
@@ -244,6 +249,10 @@ namespace SRM.Api.Services
 
             // verificar que reserva pertenezca al usuario
             if (reservation.AppUserId != userId) return Result<PaymentWithUserEmailDto>.Fail("Esta reserva no te pertenece.");
+
+            // validar que no haya ningun pago pendiente
+            if (reservation.State == ReservationState.PaymentPending)
+                return Result<PaymentWithUserEmailDto>.Fail("Hay pagos pendientes para esta reserva.");
 
             ReservationState prevReservationState = reservation.State;
 
