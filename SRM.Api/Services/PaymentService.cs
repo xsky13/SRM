@@ -13,14 +13,7 @@ namespace SRM.Api.Services
     {
         public async Task CardPaymentWebhook(PaymentWebhookRequest request)
         {
-            // se llama el webhook con el id de mercado pago
-            // conseguir el pago con ese id
-            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.MpPaymentId == request.Data.Id);
-            if (payment == null)
-            {
-                logger.LogWarning("Pago con el id no existe: {PaymentId}", request.Data.Id);
-                return;
-            }
+            if (request.Type != "payment") return;
 
             // en base al estado de este actualizar el estado del pago
             // convertirlo a long porque los pagos de mercado pago trabajan con long
@@ -30,62 +23,72 @@ namespace SRM.Api.Services
                 return;
             }
 
+            // conseguir el pago con ese id
+            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.MpPaymentId == request.Data.Id);
+            if (payment == null)
+            {
+                logger.LogWarning("Pago con el id no existe: {PaymentId}", request.Data.Id);
+                throw new KeyNotFoundException($"Pago {request.Data.Id} no encontrado"); // supuestamente con esto mp reintenta el pago porque es 404??
+            }
+
             // actualizar estado del pago
             var client = new PaymentClient();
             var mpPayment = await client.GetAsync(mpPaymentId);
 
             var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
+            if (payment.PaymentStatus == newStatus) return;
             payment.PaymentStatus = newStatus;
 
             // finalmente tambien actualizar el estado de la reserva
-
             var reservation = await _db.Reservations.FindAsync(payment.ReservationId);
             if (reservation != null)
             {
+                // hay que verificar si al hacer el pago hay que actualizar las fechas de la reserva, o su estado (con payment.PreviousReservationState)
+                // PreviousReservationState se usa en caso de error y tener que hacer fallback
+                var isDateChange = payment.PendingCheckInDate.HasValue && payment.PendingCheckOutDate.HasValue;
 
-                // actualizar el estado de la reserva tambien
-                reservation.State = newStatus switch
+                switch (newStatus)
                 {
-                    PaymentStatus.Approved => ReservationState.ConfirmedPaymentComplete,
-                    PaymentStatus.Rejected or PaymentStatus.Cancelled => payment.PreviousReservationState ?? ReservationState.Cancelled,
-                    _ => reservation.State
-                };
+                    case PaymentStatus.Approved:
+                        if (isDateChange)
+                {
+                            reservation.CheckInDate = payment.PendingCheckInDate!.Value;
+                            reservation.CheckOutDate = payment.PendingCheckOutDate!.Value;
+                            reservation.State = ReservationState.ConfirmedPaymentComplete;
+                }
+                        else if (payment.IsSign)
+                        {
+                            if (reservation.State != ReservationState.ConfirmedPaymentComplete)
+                                reservation.State = ReservationState.ConfirmedPaymentIncomplete;
+                        }
+                        else reservation.State = ReservationState.ConfirmedPaymentComplete; // el pago es lo restante, se puede poner como confirmado completo
 
-                if (newStatus == PaymentStatus.Approved && payment.PendingCheckInDate != null && payment.PendingCheckOutDate != null)
-                {
-                    reservation.CheckInDate = payment.PendingCheckInDate.Value;
-                    reservation.CheckOutDate = payment.PendingCheckOutDate.Value;
-                    reservation.UpdatedAt = DateTime.UtcNow;
+                        break;
+                    case PaymentStatus.Rejected or PaymentStatus.Cancelled:
+                        // si estamos tratando de modificar la reserva y se rechaza el pago, volvemos al estado anterior de la reserva
+                        reservation.State = payment.PreviousReservationState ?? (isDateChange ? ReservationState.ConfirmedPaymentIncomplete : ReservationState.Cancelled);
+                        break;
+                    case PaymentStatus.Refunded or PaymentStatus.ChargedBack or PaymentStatus.InMediation:
+                        logger.LogError("Pago {PaymentId} paso a {Status} (reserva {ReservationId}): requiere revision manual", payment.Id, newStatus, reservation.Id);
+                        // TODO: avisar al admin, decidir que hacer con la reserva
+                        break;
                 }
 
-                // buscar pagos 
-                var payments = await _db.Payments
-                    .Where(p => p.ReservationId == reservation.Id)
-                    .Select(p => new { p.IsSign, p.PaymentStatus })
-                    .ToListAsync();
-
-                // si no hay ninguno que no sea sena, el pago esta incompleto
-                if (!payments.Any(p => !p.IsSign && p.PaymentStatus == PaymentStatus.Approved))
+                if (isDateChange && (newStatus is PaymentStatus.Approved or PaymentStatus.Rejected or PaymentStatus.Cancelled))
                 {
-                    reservation.State = newStatus switch
-                    {
-                        PaymentStatus.Approved => ReservationState.ConfirmedPaymentIncomplete,
-                        PaymentStatus.Rejected or PaymentStatus.Cancelled => ReservationState.Cancelled,
-                        _ => reservation.State
-                    };
+                    payment.PendingCheckInDate = null;
+                    payment.PendingCheckOutDate = null;
+                    payment.PreviousReservationState = null;
                 }
 
                 reservation.UpdatedAt = DateTime.UtcNow;
-            }
-
             await _db.SaveChangesAsync();
 
-            // mandar ticket si no lo hay
-            if (payment.TicketId == null)
+                if (newStatus == PaymentStatus.Approved && payment.TicketId == null)
             {
                 // TODO: llamar servicio de ticket
             }
-
+        }
         }
 
 
