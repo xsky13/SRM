@@ -20,6 +20,7 @@ namespace SRM.Api.Data.Migrations
                 .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "btree_gist");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("SRM.Api.Models.Entities.Apartment", b =>
@@ -164,6 +165,15 @@ namespace SRM.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PendingCheckInDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PendingCheckOutDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("PreviousReservationState")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("ReservationId")

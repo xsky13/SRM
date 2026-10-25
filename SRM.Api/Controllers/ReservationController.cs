@@ -84,24 +84,96 @@ namespace SRM.Api.Controllers
 
         }
 
-        [HttpPost("{reservationId}/cancel")]
+        [HttpPut("{reservationId}")]
+        public async Task<ActionResult<ReservationDetailDto>> EditOwnReservation([FromBody] EditOwnReservationRequestNoPaymentDto request, Guid reservationId)
+        {
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
+            if (!await _userService.UserExists(userId.Value))
+                return BadRequest("Usuario no encontrado.");
+
+            var reservationValidation = await _reservationService.ValidateReservation(request.NewEndDate, request.NewStartDate, reservationId, userId.Value);
+            if (!reservationValidation.Success) return StatusCode(reservationValidation.StatusCode, new { Message = reservationValidation.Error! });
+            var reservation = reservationValidation.Value!;
+
+            // cuanto tiempo hay a comparacion de la reserva actual?
+            var newNights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var oldNights = Math.Max((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days, 1);
+
+            // hay menos tiempo
+            if (newNights <= oldNights)
+            {
+                var result = await _reservationService.EditOwnReservation(request, reservation, userId.Value);
+                return result.ToActionResult();
+            }
+
+            if (reservation.State == Models.Enums.ReservationState.NotConfirmed)
+            {
+                var result = await _reservationService.EditOwnReservation(request, reservation, userId.Value);
+                return result.ToActionResult();
+            }
+
+            // no hay ningun otro caso que resolver en este camino
+            return BadRequest("Estado de reserva invalido para este caso");
+        }
+
+        [HttpPut("{reservationId}/full")]
+        public async Task<ActionResult<ReservationDetailDto>> EditOwnReservationFull([FromBody] EditOwnReservationRequestPaymentDto request, Guid reservationId)
+        {
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
+            if (!await _userService.UserExists(userId.Value))
+                return BadRequest("Usuario no encontrado.");
+
+            var reservationValidation = await _reservationService.ValidateReservation(request.NewEndDate, request.NewStartDate, reservationId, userId.Value);
+            if (!reservationValidation.Success) return StatusCode(reservationValidation.StatusCode, new { Message = reservationValidation.Error! });
+            var reservation = reservationValidation.Value!;
+
+            /*
+             ESTA FUNCION MANEJA EL CASO DE QUE HAYA PAGOS VALIDOS
+            */
+            if (reservation.State != Models.Enums.ReservationState.ConfirmedPaymentComplete && reservation.State != Models.Enums.ReservationState.ConfirmedPaymentIncomplete)
+                return BadRequest("Esta reserva no esta confirmada.");
+
+            var newNights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var oldNights = Math.Max((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days, 1);
+
+            // hay menos tiempo (verificar por la dudas)
+            if (newNights <= oldNights)
+            {
+                var editResult = await _reservationService.EditOwnReservation(new EditOwnReservationRequestNoPaymentDto
+                {
+                    NewEndDate = request.NewEndDate,
+                    NewStartDate = request.NewStartDate
+                }, reservation, userId.Value);
+                return editResult.ToActionResult();
+            }
+
+            var result = await _reservationService.EditOwnReservationFull(request, reservation, userId.Value);
+            return result.ToActionResult();
+        }
+
+
+        [HttpPost("cancel/{reservationId}")]
         public async Task<ActionResult<Reservation>> CancelReservation(Guid reservationId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (userId == null)
                 return Unauthorized();
-            
+
             var userGuid = Guid.Empty;
-            
+
             if (!Guid.TryParse(userId, out userGuid))
                 return BadRequest("Id invalido.");
-            
+
             if (!await _userService.UserExists(userGuid))
                 return BadRequest("Usuario no encontrado.");
-            
+
             var response = await _reservationService.CancelReservation(reservationId, userGuid);
-            
+
             return response.ToActionResult();
         }
     }

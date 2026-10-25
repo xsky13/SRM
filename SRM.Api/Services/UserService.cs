@@ -70,6 +70,13 @@ namespace SRM.Api.Services
             return await _db.AppUsers.AnyAsync(u => u.Id == userId);
         }
 
+        public async Task DeleteUser(Guid userId)
+        {
+            await _db.AppUsers
+                .Where(u => u.Id == userId)
+                .ExecuteDeleteAsync();
+        }
+
 
         public async Task<Result<UserListingDto>> GetUser(Guid userId)
         {

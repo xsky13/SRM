@@ -1,7 +1,6 @@
 ﻿//using MercadoPago.Resource.Payment;
-using MercadoPago.Resource.User;
+using MercadoPago.Resource.Payment;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Payment;
@@ -10,16 +9,14 @@ using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 
 namespace SRM.Api.Services
 {
-    public class ReservationService(AppDbContext _db) : IReservationService
+    public class ReservationService(AppDbContext _db, IBankService _bankService) : IReservationService
     {
-        public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId) {
+        public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId)
+        {
             ReservationDetailDto returnedReservation;
             var reservation = await _db.Reservations
                 .AsNoTracking()
@@ -110,39 +107,32 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId)
+        public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null)
         {
-            var effectiveCheckOut = checkOutDate == checkInDate ? checkOutDate.AddDays(1) : checkOutDate;
+            /*
+                excludeReservationId
+                Es para el momento de editar reserva propia. Si queremos buscar reservas ya confirmadas en las nuevas fechas seleccionadas, hay que exlcuir 
+                la reserva actual.
+             */
+            var checkIn = checkInDate.Date;
+            var checkOut = checkOutDate.Date;
+            var effectiveCheckOut = checkOut == checkIn ? checkOut.AddDays(1) : checkOut;
 
-            // Fetch conflicting reservations instead of just checking existence
-            var conflictingReservations = await _db.Reservations
-                .Where(r =>
-                    (r.State == ReservationState.ConfirmedPaymentComplete ||
-                     r.State == ReservationState.ConfirmedPaymentIncomplete ||
-                     r.State == ReservationState.PaymentPending) &&
-                    r.ApartmentId == apartmentId &&
-                    r.CheckInDate < effectiveCheckOut &&
-                    (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkInDate
-                )
-                .ToListAsync();
-
-            // Print details of conflicting records
-            Console.WriteLine($"\n--- [DEBUG] DatesAreInvalid Check ---");
-            Console.WriteLine($"Input CheckIn: {checkInDate} | CheckOut: {checkOutDate} | Apartment: {apartmentId}");
-            Console.WriteLine($"Found {conflictingReservations.Count} conflicting reservation(s):");
-
-            foreach (var r in conflictingReservations)
-            {
-                Console.WriteLine($" -> Reservation Id: {r.Id} | State: {r.State} | DB CheckIn: {r.CheckInDate} | DB CheckOut: {r.CheckOutDate}");
-            }
-            Console.WriteLine("-------------------------------------\n");
-
-            return conflictingReservations.Any();
+            return await _db.Reservations.AnyAsync(r =>
+                r.ApartmentId == apartmentId &&
+                (excludeReservationId == null || r.Id != excludeReservationId) &&
+                (r.State == ReservationState.ConfirmedPaymentComplete ||
+                 r.State == ReservationState.ConfirmedPaymentIncomplete ||
+                 r.State == ReservationState.PaymentPending) &&
+                r.CheckInDate < effectiveCheckOut &&
+                (r.CheckOutDate == r.CheckInDate ? r.CheckOutDate.AddDays(1) : r.CheckOutDate) > checkIn
+            );
         }
+
+        private static int Nights(DateTime checkIn, DateTime checkOut) =>  Math.Max((checkOut.Date - checkIn.Date).Days, 1);
 
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
-            Console.WriteLine($"\n\n checkDate: {checkInDate} \n\n");
             var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
             if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
 
@@ -160,6 +150,13 @@ namespace SRM.Api.Services
             };
 
             _db.Reservations.Add(reservation);
+
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                return Result<Reservation>.Fail("Ya hay una reserva con estas fechas");
+            }
 
             return Result<Reservation>.Ok(reservation);
         }
@@ -194,6 +191,137 @@ namespace SRM.Api.Services
             await _db.SaveChangesAsync();
         }
 
+
+        public async Task<decimal> UnpaidAmount(Guid reservationId, decimal newPrice)
+        {
+            var payments = await _db.Payments
+                .Select(p => new { p.ReservationId, p.Amount })
+                .Where(p => p.ReservationId == reservationId).ToListAsync();
+
+            decimal totalPayed = 0;
+            foreach (var payment in payments)
+                totalPayed += payment.Amount;
+            return newPrice - totalPayed;
+        }
+
+        public async Task<Result<Reservation>> ValidateReservation(DateTime newEndDate, DateTime newStartDate, Guid reservationId, Guid userId)
+        {
+            var reservation = await _db.Reservations
+                .Include(r => r.Apartment)
+                .FirstOrDefaultAsync(r => r.Id == reservationId);
+            if (reservation == null) return Result<Reservation>.Fail("La reserva no existe", 404);
+
+            if (newEndDate.Date < newStartDate.Date)
+                return Result<Reservation>.Fail("La fecha de salida no puede ser anterior a la de entrada.");
+
+            if (newStartDate.Date < DateTime.UtcNow.Date)
+                return Result<Reservation>.Fail("La nueva fecha de entrada no puede estar en el pasado.");
+
+            if (reservation.AppUserId != userId) return Result<Reservation>.Fail("Esta reserva no le pertenece.", 403);
+
+            if (reservation.State == ReservationState.Cancelled || reservation.State == ReservationState.PaymentPending)
+                return Result<Reservation>.Fail("Esta reserva no se puede modificar. Hay un pago pendiente o esta cancelada.");
+
+            // TODO: validar?
+            // la reserva solo se puede modificar hasta 24 horas antes de que entre?
+            var now = DateTime.UtcNow;
+            var timePassed = reservation.CheckInDate - now;
+            if (timePassed.TotalHours < 24) return Result<Reservation>.Fail("No puede modificar su reserva cuando faltan menos de 24 horas para que comienze.");
+
+            // checkear fechas
+            var datesInvalid = await DatesAreInvalid(newEndDate, newStartDate, reservation.ApartmentId, reservation.Id);
+            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas.");
+
+            return Result<Reservation>.Ok(reservation);
+        }
+
+
+        public async Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestNoPaymentDto request, Reservation reservation, Guid userId)
+        {
+            reservation.CheckInDate = request.NewStartDate;
+            reservation.CheckOutDate = request.NewEndDate;
+            reservation.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            if (reservation.State == ReservationState.ConfirmedPaymentComplete)
+            {
+                // notificar al administrador y usuario
+            }
+
+            return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+        }
+
+        public async Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId)
+        {
+            // esta confirmado por el controlador que el estado de la reserva es o confirmedpaymentincomplete o confirmedpaymentcomplete, y que las fechas de la reserva son validas
+            var totalPayed = await _db.Payments
+                .Where(p => p.ReservationId == reservation.Id && p.PaymentStatus == Models.Enums.PaymentStatus.Approved)
+                .SumAsync(p => p.Amount);
+            
+
+            /*
+             Conseguir nuevo costo total
+             */
+            decimal apartmentCost = await _db.Apartments
+                .Where(a => a.Id == reservation.ApartmentId)
+                .Select(a => a.Price)
+                .FirstOrDefaultAsync();
+
+            if (apartmentCost == 0) // no se encontro el departamento
+                return Result<ReservationDetailDto>.Fail("El departamento para los pagos no existe.");
+
+            var nights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var fullCost = nights * apartmentCost;
+            var amount = fullCost - totalPayed; // diferencia entre lo pagado y el nuevo total
+
+            if (amount <= 0)
+                return Result<ReservationDetailDto>.Fail("No hay nada para cobrar con estas fechas.");
+
+            /*
+                Pagar
+             */
+            CreatePaymentRequest paymentRequest = new()
+            {
+                TransactionAmount = amount,
+                Token = request.Token,
+                Installments = request.Installments,
+                Payment_Method_Id = request.Payment_Method_Id,
+                Payer = request.Payer,
+                ReservationId = reservation.Id,
+                CheckInDate = request.NewStartDate,
+                CheckOutDate = request.NewEndDate
+            };
+            var paymentResult = await _bankService.CreatePayment(paymentRequest, amount, userId, reservation.Id, "", isSign: false); // TODO: resolver idempotency (later)
+            if (!paymentResult.Success) return Result<ReservationDetailDto>.Fail(paymentResult.Error!);
+            var payment = paymentResult.Value!;
+
+            switch (payment.PaymentStatus)
+            {
+                case Models.Enums.PaymentStatus.Approved:
+                    reservation.CheckInDate = request.NewStartDate;
+                    reservation.CheckOutDate = request.NewEndDate;
+                    reservation.State = ReservationState.ConfirmedPaymentComplete;
+                    reservation.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                    return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+
+                case Models.Enums.PaymentStatus.Rejected or Models.Enums.PaymentStatus.Cancelled:
+                    await _db.SaveChangesAsync(); // registra el intento fallido
+                    return Result<ReservationDetailDto>.Fail("El pago fue rechazado. Sus fechas no fueron modificadas.");
+
+                default: // Pending, in_process, authorized
+                    payment.PendingCheckInDate = request.NewStartDate;
+                    payment.PendingCheckOutDate = request.NewEndDate;
+                    payment.PreviousReservationState = reservation.State;
+                    reservation.State = ReservationState.PaymentPending;
+                    reservation.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                    // la reserva queda con las fechas viejas; el webhook las aplica si el pago se aprueba
+                    return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+            }
+        }
+        
+
         public async Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId)
         {
             var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
@@ -219,7 +347,7 @@ namespace SRM.Api.Services
                     400);
 
             var pagosAprobados = reservation.Payments
-                .Where(p => p.PaymentStatus == PaymentStatus.Approved)
+                .Where(p => p.PaymentStatus == Models.Enums.PaymentStatus.Approved)
                 .ToList();
 
             var senaRetenida = pagosAprobados.Where(p => p.IsSign).Sum(p => p.Amount);

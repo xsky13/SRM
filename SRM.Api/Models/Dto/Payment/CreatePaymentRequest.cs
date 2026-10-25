@@ -12,8 +12,7 @@
         public Identification Identification { get; set; }
     }
 
-
-    public record CreatePaymentRequest
+    public class MpPaymentObject
     {
         public decimal TransactionAmount { get; set; }
         public string Token { get; set; }
@@ -21,8 +20,11 @@
         public string Payment_Method_Id { get; set; }
         public Payer Payer { get; set; }
         public Guid? ReservationId { get; set; } = null;
+    }
 
+    public class CreatePaymentRequest : MpPaymentObject
+    {
         public DateTime CheckInDate { get; set; }
-            public DateTime CheckOutDate { get; set; }
+        public DateTime CheckOutDate { get; set; }
     }
 }
