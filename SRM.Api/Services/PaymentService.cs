@@ -194,7 +194,13 @@ namespace SRM.Api.Services
 
             var payment = paymentResult.Value!;
             ApplyPaymentOutcome(reservation, payment, ReservationState.ConfirmedPaymentComplete, prevState);
-            await _db.SaveChangesAsync();
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                // TODO: notificar al admin que tiene que devolver la plata
+                return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas. El administrador lo estara reembolsando en breve.");
+            }
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
             {
@@ -257,7 +263,13 @@ namespace SRM.Api.Services
 
             var payment = paymentResult.Value!;
             ApplyPaymentOutcome(reservation, payment, ReservationState.ConfirmedPaymentIncomplete, prevState); // Incomplete al aprobar
-            await _db.SaveChangesAsync();
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                // TODO: notificar al admin que tiene que devolver la plata
+                return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas. El administrador lo estara reembolsando en breve.");
+            }
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
             {

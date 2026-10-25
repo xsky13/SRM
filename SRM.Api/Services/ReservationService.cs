@@ -151,6 +151,13 @@ namespace SRM.Api.Services
 
             _db.Reservations.Add(reservation);
 
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                return Result<Reservation>.Fail("Ya hay una reserva con estas fechas");
+            }
+
             return Result<Reservation>.Ok(reservation);
         }
 
