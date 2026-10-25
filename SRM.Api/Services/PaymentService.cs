@@ -51,11 +51,23 @@ namespace SRM.Api.Services
                 {
                     case PaymentStatus.Approved:
                         if (isDateChange)
-                {
-                            reservation.CheckInDate = payment.PendingCheckInDate!.Value;
-                            reservation.CheckOutDate = payment.PendingCheckOutDate!.Value;
-                            reservation.State = ReservationState.ConfirmedPaymentComplete;
-                }
+                        {
+                            // editarse una reserva, si setea al estado de PaymentPending, todavia no se actualizaron las fechas, entonces cualquiera puede reservar en ellas
+                            var unavailable = await _reservationService.DatesAreInvalid(payment.PendingCheckOutDate!.Value, payment.PendingCheckInDate!.Value, reservation.ApartmentId, reservation.Id);
+                            if (unavailable)
+                            {
+                                // el pago ya se cobro, quedan las fechas viejas y hay que reembolsar a mano
+                                logger.LogError("Pago {PaymentId} aprobado pero las fechas nuevas de la reserva {ReservationId} ya no estan disponibles", payment.Id, reservation.Id);
+                                reservation.State = payment.PreviousReservationState ?? ReservationState.ConfirmedPaymentIncomplete;
+                                // TODO: avisar al admin
+                            }
+                            else
+                            {
+                                reservation.CheckInDate = payment.PendingCheckInDate!.Value;
+                                reservation.CheckOutDate = payment.PendingCheckOutDate!.Value;
+                                reservation.State = ReservationState.ConfirmedPaymentComplete;
+                            }
+                        }
                         else if (payment.IsSign)
                         {
                             if (reservation.State != ReservationState.ConfirmedPaymentComplete)
@@ -74,7 +86,7 @@ namespace SRM.Api.Services
                         break;
                 }
 
-                if (isDateChange && (newStatus is PaymentStatus.Approved or PaymentStatus.Rejected or PaymentStatus.Cancelled))
+                if (newStatus == PaymentStatus.Approved || newStatus == PaymentStatus.Rejected || newStatus == PaymentStatus.Cancelled)
                 {
                     payment.PendingCheckInDate = null;
                     payment.PendingCheckOutDate = null;
@@ -82,74 +94,106 @@ namespace SRM.Api.Services
                 }
 
                 reservation.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+                await _db.SaveChangesAsync();
 
                 if (newStatus == PaymentStatus.Approved && payment.TicketId == null)
-            {
-                // TODO: llamar servicio de ticket
+                {
+                    // TODO: llamar servicio de ticket
+                }
             }
         }
+
+
+
+        private async Task<Result<Reservation>> GetPayableReservation(Guid reservationId, Guid? userId, ReservationState required)
+        {
+            var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Id == reservationId);
+            if (reservation == null) return Result<Reservation>.Fail("No se encontro la reserva", 404);
+
+            if (userId == null || reservation.AppUserId != userId) return Result<Reservation>.Fail("Esta reserva no te pertenece.", 403);
+            if (reservation.State != required) return Result<Reservation>.Fail("La reserva no esta en un estado que permita este pago.");
+
+            return Result<Reservation>.Ok(reservation);
+        }
+
+        private static void ApplyPaymentOutcome(Reservation reservation, Payment payment, ReservationState approvedState, ReservationState? prevState)
+        {
+            switch (payment.PaymentStatus)
+            {
+                case PaymentStatus.Approved:
+                    reservation.State = approvedState; // puede ser ConfirmedPaymentIncomplete o ConfirmedPaymentComplete
+                    break;
+                case PaymentStatus.Rejected or PaymentStatus.Cancelled:
+                    reservation.State = prevState ?? ReservationState.Cancelled;
+                    break;
+                default: // pending, in_process, authorized: el webhook lo resuelve
+                    payment.PreviousReservationState = prevState;
+                    reservation.State = ReservationState.PaymentPending;
+                    break;
+            }
+            reservation.UpdatedAt = DateTime.UtcNow;
         }
 
 
         public async Task<Result<PaymentWithUserEmailDto>> ProcessFullPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid? userId = null, Guid? reservationId = null)
         {
-            if (request.CheckOutDate.Date < request.CheckInDate.Date)
-                return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
-
-            // conseguir monto
-            var amountResult = await GetFullPrice(apartmentId, request.CheckInDate, request.CheckOutDate);
-            if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error!);
-            var amount = amountResult.Value;
-
-            /*Pasos*/
-            // crear usuario guest si no nos dan id
-            Guid userIdToUse;
-            if (userId.HasValue) userIdToUse = userId.Value;
-            else
-            {
-                var user = _userService.CreateUser(email: request.Payer.Email);
-                userIdToUse = user.Id;
-            }
-
-            // crear reserva con estado payment pending (si no existe todavia). ya verifica si las fechas son validas o no
             Reservation reservation;
+            Guid userIdToUse;
+            decimal amount;
+            ReservationState? prevState = null;
+
             if (reservationId.HasValue)
             {
-                var reservationQuery = await _db.Reservations.FindAsync(reservationId);
-                if (reservationQuery == null) return Result<PaymentWithUserEmailDto>.Fail("No se encontro la reserva");
-                reservation = reservationQuery;
-            } else
+                // buscar la reserva y validarla 
+                var existing = await GetPayableReservation(reservationId.Value, userId, ReservationState.NotConfirmed);
+                if (!existing.Success) return Result<PaymentWithUserEmailDto>.Fail(existing.Error!);
+
+                reservation = existing.Value!;
+                userIdToUse = userId!.Value;
+                prevState = reservation.State;
+
+                // se busca el precio con los datos de la reserva en vez de los del request
+                var amountResult = await GetFullPrice(reservation.ApartmentId, reservation.CheckInDate, reservation.CheckOutDate);
+                if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error!);
+                amount = amountResult.Value;
+
+                var conflicting = await _reservationService.DatesAreInvalid(
+                    reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId, reservation.Id);
+                if (conflicting) return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas");
+
+                reservation.State = ReservationState.PaymentPending; // bloquea las fechas mientras se cobra
+            }
+            else
             {
+                if (request.CheckOutDate.Date < request.CheckInDate.Date)
+                    return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
+
+                var amountResult = await GetFullPrice(apartmentId, request.CheckInDate, request.CheckOutDate);
+                if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error!);
+                amount = amountResult.Value;
+
+                userIdToUse = userId ?? _userService.CreateUser(email: request.Payer.Email).Id;
+
                 var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userIdToUse);
                 if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
-                reservation = reservationResult.Value;
+                reservation = reservationResult.Value!;
             }
 
-            // validar que no haya ningun pago pendiente
-            if (reservation.State == ReservationState.PaymentPending)
-                return Result<PaymentWithUserEmailDto>.Fail("Hay pagos pendientes para esta reserva.");
-
-            await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
+            await _db.SaveChangesAsync(); // bloquea las fechas antes de cobrar
 
             var paymentResult = await _bankService.CreatePayment(request, amount, userIdToUse, reservation.Id, idempotencyKey, isSign: false);
             if (!paymentResult.Success)
             {
-                reservation.State = ReservationState.Cancelled;
+                reservation.State = prevState ?? ReservationState.Cancelled;
+                // borramos el usuario si fue un usuario ghost
+                if (userId == null) await _userService.DeleteUser(userIdToUse);
+
                 await _db.SaveChangesAsync();
                 return Result<PaymentWithUserEmailDto>.Fail(paymentResult.Error!);
             }
 
-            Payment payment = paymentResult.Value!;
-
-            reservation.State = payment.PaymentStatus switch
-            {
-                PaymentStatus.Approved => ReservationState.ConfirmedPaymentComplete,
-                PaymentStatus.Rejected or PaymentStatus.Cancelled => ReservationState.Cancelled,
-                _ => ReservationState.PaymentPending
-            };
-            reservation.UpdatedAt = DateTime.UtcNow;
-
+            var payment = paymentResult.Value!;
+            ApplyPaymentOutcome(reservation, payment, ReservationState.ConfirmedPaymentComplete, prevState);
             await _db.SaveChangesAsync();
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
@@ -159,47 +203,45 @@ namespace SRM.Api.Services
 
             var dto = payment.ToDtoWithUserEmail();
             dto.Email = request.Payer.Email;
-
             return Result<PaymentWithUserEmailDto>.Ok(dto);
         }
 
         public async Task<Result<PaymentWithUserEmailDto>> ProcessSignPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid userId, Guid? reservationId = null)
         {
-            if (request.CheckOutDate.Date < request.CheckInDate.Date)
-                return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
-
-            // conseguir monto
-            var amountResult = await GetSignPrice(apartmentId, request.CheckInDate, request.CheckOutDate);
-            if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error);
-            var amount = amountResult.Value;
-
-            /*Pasos*/
-
-            // crear reserva con estado payment pending. ya verifica si las fechas son validas o no
             Reservation reservation;
+            decimal amount;
+            ReservationState? prevState = null;
             if (reservationId.HasValue)
             {
-                var reservationQuery = await _db.Reservations.FindAsync(reservationId);
-                if (reservationQuery == null) return Result<PaymentWithUserEmailDto>.Fail("No se encontro la reserva");
-                reservation = reservationQuery;
+                var existingReservation = await GetPayableReservation(reservationId.Value, userId, ReservationState.NotConfirmed);
+                if (!existingReservation.Success) return Result<PaymentWithUserEmailDto>.Fail(existingReservation.Error!);
+                reservation = existingReservation.Value!;
+                prevState = reservation.State;
 
-                // just in case
-                // validar que no haya ningun pago pendiente
-                if (reservation.State == ReservationState.PaymentPending)
-                    return Result<PaymentWithUserEmailDto>.Fail("Hay pagos pendientes para esta reserva.");
+                // se consigue el monto a pagar con los datos de la reserva de la db en vez de los datos entrantes
+                var amountResult = await GetSignPrice(reservation.ApartmentId, reservation.CheckInDate, reservation.CheckOutDate); // GetSignPrice
+                if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error!);
+                amount = amountResult.Value;
 
                 // check for conflicting dates
-                var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId);
+                var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId, reservation.Id);
                 if (conflicting)
                     return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas");
 
-                reservation.State = ReservationState.ConfirmedPaymentIncomplete; // lock down the reservation dates so nobody else takes them.
+                reservation.State = ReservationState.PaymentPending; // lock down the reservation dates during payment so nobody else takes them.
             }
             else
             {
+                if (request.CheckOutDate.Date < request.CheckInDate.Date)
+                    return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
+
+                var amountResult = await GetSignPrice(apartmentId, request.CheckInDate, request.CheckOutDate);
+                if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error!);
+                amount = amountResult.Value;
+
                 var reservationResult = await _reservationService.CreateReservation(request.CheckInDate, request.CheckOutDate, apartmentId, userId);
                 if (!reservationResult.Success) return Result<PaymentWithUserEmailDto>.Fail(reservationResult.Error!);
-                reservation = reservationResult.Value;
+                reservation = reservationResult.Value!;
             }
 
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
@@ -207,21 +249,14 @@ namespace SRM.Api.Services
             var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: true);
             if (!paymentResult.Success)
             {
-                reservation.State = ReservationState.NotConfirmed;
+                reservation.State = prevState ?? ReservationState.Cancelled; // se setea a cancelada en el caso de que es una reserva nueva
                 await _db.SaveChangesAsync();
                 return Result<PaymentWithUserEmailDto>.Fail(paymentResult.Error!);
             }
 
-            Payment payment = paymentResult.Value!;
 
-            reservation.State = payment.PaymentStatus switch
-            {
-                PaymentStatus.Approved => ReservationState.ConfirmedPaymentIncomplete,
-                PaymentStatus.Rejected or PaymentStatus.Cancelled => ReservationState.Cancelled,
-                _ => ReservationState.PaymentPending
-            };
-            reservation.UpdatedAt = DateTime.UtcNow;
-
+            var payment = paymentResult.Value!;
+            ApplyPaymentOutcome(reservation, payment, ReservationState.ConfirmedPaymentIncomplete, prevState); // Incomplete al aprobar
             await _db.SaveChangesAsync();
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
@@ -237,46 +272,29 @@ namespace SRM.Api.Services
 
         public async Task<Result<PaymentWithUserEmailDto>> ProcessRestPayment(CreatePaymentRequest request, Guid reservationId, string idempotencyKey, Guid userId)
         {
-            if (request.CheckOutDate.Date < request.CheckInDate.Date)
-                return Result<PaymentWithUserEmailDto>.Fail("La fecha de checkout no puede ser anterior a la de checkin");
+            // reservation already exists
+            var existingReservation = await GetPayableReservation(reservationId, userId, ReservationState.ConfirmedPaymentIncomplete);
+            if (!existingReservation.Success) return Result<PaymentWithUserEmailDto>.Fail("La reserva no existe");
+            var reservation = existingReservation.Value!;
+            var prevState = reservation.State;
 
             // conseguir monto
             var amountResult = await GetRestPrice(reservationId);
             if (!amountResult.Success) return Result<PaymentWithUserEmailDto>.Fail(amountResult.Error!);
-            var amount = amountResult.Value!;
 
+            reservation.State = ReservationState.PaymentPending; // evita un segundo cobro mientras este esta en curso
+            await _db.SaveChangesAsync();
 
-            //buscar reserva
-            var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Id == reservationId);
-            if (reservation == null) return Result<PaymentWithUserEmailDto>.Fail("No existe la reserva");
-
-            // verificar que reserva pertenezca al usuario
-            if (reservation.AppUserId != userId) return Result<PaymentWithUserEmailDto>.Fail("Esta reserva no te pertenece.");
-
-            // validar que no haya ningun pago pendiente
-            if (reservation.State == ReservationState.PaymentPending)
-                return Result<PaymentWithUserEmailDto>.Fail("Hay pagos pendientes para esta reserva.");
-
-            ReservationState prevReservationState = reservation.State;
-
-            var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: false);
+            var paymentResult = await _bankService.CreatePayment(request, amountResult.Value, userId, reservation.Id, idempotencyKey, isSign: false);
             if (!paymentResult.Success)
             {
-                reservation.State = prevReservationState;
+                reservation.State = prevState;
                 await _db.SaveChangesAsync();
                 return Result<PaymentWithUserEmailDto>.Fail(paymentResult.Error!);
             }
 
             Payment payment = paymentResult.Value!;
-
-            reservation.State = payment.PaymentStatus switch
-            {
-                PaymentStatus.Approved => ReservationState.ConfirmedPaymentComplete,
-                PaymentStatus.Rejected or PaymentStatus.Cancelled => prevReservationState,
-                _ => prevReservationState
-            };
-            reservation.UpdatedAt = DateTime.UtcNow;
-
+            ApplyPaymentOutcome(reservation, payment, ReservationState.ConfirmedPaymentComplete, prevState);
             await _db.SaveChangesAsync();
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
@@ -289,7 +307,7 @@ namespace SRM.Api.Services
 
             return Result<PaymentWithUserEmailDto>.Ok(dto);
         }
-        
+
 
 
 
