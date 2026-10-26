@@ -216,7 +216,7 @@ public class ReservationIntegrationTests : IClassFixture<CustomWebApplicationFac
         var apartmentId = await CreateApartmentAsync(adminClient);
 
         using var userClient = await CreateUserClientAsync();
-        var reservationId = await CreateReservationAsync(userClient, apartmentId, new DateTime(2026, 10, 17), new DateTime(2026, 10, 20));
+        var reservationId = await CreateReservationAsync(userClient, apartmentId, new DateTime(2026, 11, 17), new DateTime(2026, 11, 20));
 
         var response = await userClient.PostAsync($"/api/Reservation/cancel/{reservationId}", null);
         var body = await response.Content.ReadAsStringAsync();

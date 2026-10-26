@@ -1,4 +1,7 @@
-﻿namespace SRM.Api.Models.Dto.Payment
+﻿using SRM.Api.Utils;
+using System.Text.Json.Serialization;
+
+namespace SRM.Api.Models.Dto.Payment
 {
 
     public class Identification
@@ -24,7 +27,9 @@
 
     public class CreatePaymentRequest : MpPaymentObject
     {
+        [JsonConverter(typeof(UtcDateJsonConverter))]
         public DateTime CheckInDate { get; set; }
+        [JsonConverter(typeof(UtcDateJsonConverter))]
         public DateTime CheckOutDate { get; set; }
     }
 }

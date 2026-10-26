@@ -1,4 +1,6 @@
 ﻿using SRM.Api.Models.Enums;
+using SRM.Api.Utils;
+using System.Text.Json.Serialization;
 
 namespace SRM.Api.Models.Dto.Payment
 {
@@ -8,6 +10,7 @@ namespace SRM.Api.Models.Dto.Payment
         public decimal Amount { get; set; }
         public bool IsManual { get; set; }
         public bool IsSign { get; set; }
+        [JsonConverter(typeof(UtcDateJsonConverter))]
         public DateTime PaymentDate { get; set; }
         public PaymentStatus PaymentStatus { get; set; }
         public Guid ReservationId { get; set; }

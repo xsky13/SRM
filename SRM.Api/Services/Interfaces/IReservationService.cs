@@ -24,6 +24,6 @@ namespace SRM.Api.Services.Interfaces
         Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestNoPaymentDto request, Reservation reservation, Guid userId);
         Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId);
 
-        Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId);
+        Task<Result<ReservationDetailDto>> CancelReservation(Guid reservationId, Guid userId);
     }
 }
