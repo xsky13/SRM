@@ -182,6 +182,24 @@ namespace SRM.Api.Services
             if (dto.Images == null || dto.Images.Count == 0)
                 return Result<List<ImageDto>>.Fail("Debe proporcionar al menos una imagen.", 400);
 
+            var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp"
+            };
+
+            foreach (var imageFile in dto.Images)
+            {
+                if (imageFile == null || imageFile.Length == 0)
+                    return Result<List<ImageDto>>.Fail("Las imágenes proporcionadas no son válidas o están vacías.", 400);
+
+                var extension = Path.GetExtension(imageFile.FileName ?? string.Empty);
+                if (!allowedExtensions.Contains(extension))
+                    return Result<List<ImageDto>>.Fail("El archivo no es una imagen válida. Solo se permiten .jpg, .jpeg, .png o .webp.", 400);
+            }
+
             // 1. Definir la ruta física donde se guardarán las imágenes en el contenedor
             var imagesPath = Path.Combine(_env.ContentRootPath, "Storage", "Images");
             Directory.CreateDirectory(imagesPath);
