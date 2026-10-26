@@ -14,11 +14,16 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<ReservationDetailDto>> GetReservationById(Guid id);
         public Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId);
 
-        public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId);
+        public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null);
         public Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
         public Task<Result<Reservation>> CreateAuthReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
         public Task SaveChanges();
 
-        public Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId);
+        Task<Result<Reservation>> ValidateReservation(DateTime newEndDate, DateTime newStartDate, Guid reservationId, Guid userId);
+
+        Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestNoPaymentDto request, Reservation reservation, Guid userId);
+        Task<Result<ReservationDetailDto>> EditOwnReservationFull(EditOwnReservationRequestPaymentDto request, Reservation reservation, Guid userId);
+
+        Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId);
     }
 }
