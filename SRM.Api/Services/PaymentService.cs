@@ -333,7 +333,7 @@ namespace SRM.Api.Services
             if (apartmentCost == 0) // no se encontro el departamento
                 return Result<decimal>.Fail("El departamento no existe.");
 
-            var diff = (checkOutDate.Date - checkInDate.Date).Days;
+            var diff = (checkOutDate.Date - checkInDate.Date).Days + 1;
             var nights = Math.Max(diff, 1);
             var fullCost = nights * apartmentCost;
 
@@ -350,7 +350,7 @@ namespace SRM.Api.Services
             if (apartmentCost == 0) // no se encontro el departamento
                 return Result<decimal>.Fail("El departamento no existe.");
 
-            var diff = (checkOutDate.Date - checkInDate.Date).Days;
+            var diff = (checkOutDate.Date - checkInDate.Date).Days + 1;
             var nights = Math.Max(diff, 1);
             var fullCost = nights * apartmentCost * 0.1m;
 
@@ -367,7 +367,7 @@ namespace SRM.Api.Services
                 return Result<decimal>.Fail("La reserva no existe.");
 
             // sacar los dias desde la reserva ya creada porque el usuario podria pasar fechas que acorten la reserva
-            var diff = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days;
+            var diff = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1;
             var nights = Math.Max(diff, 1);
             var fullCost = nights * reservation.Apartment.Price;
 

@@ -50,7 +50,7 @@ namespace SRM.Api.Services
             if (apartmentCost == 0) // no se encontro el departamento
                 return Result<ReservationDetailDto>.Fail("El departamento no existe.");
 
-            var diff = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days;
+            var diff = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1;
             var nights = Math.Max(diff, 1);
             var fullCost = nights * apartmentCost;
 
@@ -129,8 +129,6 @@ namespace SRM.Api.Services
             );
         }
 
-        private static int Nights(DateTime checkIn, DateTime checkOut) =>  Math.Max((checkOut.Date - checkIn.Date).Days, 1);
-
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
             var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
@@ -191,18 +189,6 @@ namespace SRM.Api.Services
             await _db.SaveChangesAsync();
         }
 
-
-        public async Task<decimal> UnpaidAmount(Guid reservationId, decimal newPrice)
-        {
-            var payments = await _db.Payments
-                .Select(p => new { p.ReservationId, p.Amount })
-                .Where(p => p.ReservationId == reservationId).ToListAsync();
-
-            decimal totalPayed = 0;
-            foreach (var payment in payments)
-                totalPayed += payment.Amount;
-            return newPrice - totalPayed;
-        }
 
         public async Task<Result<Reservation>> ValidateReservation(DateTime newEndDate, DateTime newStartDate, Guid reservationId, Guid userId)
         {
@@ -270,7 +256,7 @@ namespace SRM.Api.Services
             if (apartmentCost == 0) // no se encontro el departamento
                 return Result<ReservationDetailDto>.Fail("El departamento para los pagos no existe.");
 
-            var nights = Math.Max((request.NewEndDate.Date - request.NewStartDate.Date).Days, 1);
+            var nights = (request.NewEndDate.Date - request.NewStartDate.Date).Days + 1;
             var fullCost = nights * apartmentCost;
             var amount = fullCost - totalPayed; // diferencia entre lo pagado y el nuevo total
 
