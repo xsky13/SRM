@@ -10,6 +10,8 @@ namespace SRM.Api.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(@"CREATE EXTENSION IF NOT EXISTS btree_gist;");
+
             migrationBuilder.Sql(@"
                 ALTER TABLE ""Reservations""
                 ADD CONSTRAINT ""no_overlapping_reservations""
@@ -21,7 +23,7 @@ namespace SRM.Api.Data.Migrations
                                  (""CheckInDate"" AT TIME ZONE 'UTC')::date + 1),
                         '[)')) WITH &&
                 )
-                WHERE (""IsDeleted"" = false AND ""State"" IN (/* valores de ConfirmedPaymentComplete, ConfirmedPaymentIncomplete, PaymentPending */));
+                WHERE (""IsDeleted"" = false AND ""State"" IN (2, 3, 4));
             ");
         }
 
