@@ -6,7 +6,7 @@ using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using SRM.Api.Models.Enums;
 using SRM.Api.Models.Dto.Images;
-using Microsoft.Extensions.Hosting; // Nueva directiva usando agregada
+using Microsoft.Extensions.Hosting; 
 using System.IO;
 
 namespace SRM.Api.Services
