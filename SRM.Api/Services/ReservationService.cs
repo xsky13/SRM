@@ -15,7 +15,7 @@ namespace SRM.Api.Services
 {
     public class ReservationService(AppDbContext _db, IBankService _bankService) : IReservationService
     {
-        public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId)
+        public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId, Guid userId)
         {
             ReservationDetailDto returnedReservation;
             var reservation = await _db.Reservations
@@ -30,14 +30,17 @@ namespace SRM.Api.Services
                     State = r.State,
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
+                    AppUserId = r.AppUserId,
                     Payments = r.Payments.Select(p => p.ToDto()).ToList(),
                     Apartment = new ApartmentListingDto(r.ApartmentId, r.Apartment.Name, r.Apartment.CoverImgUrl, r.Apartment.Location, r.Apartment.Price)
                 })
                 .FirstOrDefaultAsync();
 
-
             if (reservation == null)
                 return Result<ReservationDetailDto>.Fail("No existe la reserva", 404);
+
+            if (reservation.AppUserId != userId)
+                return Result<ReservationDetailDto>.Fail("No existe la reserva", 403);
 
 
             returnedReservation = reservation;

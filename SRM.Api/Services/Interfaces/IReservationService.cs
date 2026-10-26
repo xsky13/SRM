@@ -11,7 +11,7 @@ namespace SRM.Api.Services.Interfaces
     public interface IReservationService
     {
         public Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid apartmentId);
-        public Task<Result<ReservationDetailDto>> GetReservationById(Guid id);
+        public Task<Result<ReservationDetailDto>> GetReservationById(Guid id, Guid userId);
         public Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId);
 
         public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null);

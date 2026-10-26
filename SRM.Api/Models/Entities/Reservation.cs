@@ -34,6 +34,7 @@ namespace SRM.Api.Models.Entities
                 State = State,
                 UpdatedAt = UpdatedAt,
                 CreatedAt = CreatedAt,
+                AppUserId = AppUserId,
                 Payments = Payments.Select(p => p.ToDto()).ToList()
             };
         }

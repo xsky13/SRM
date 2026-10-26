@@ -18,7 +18,10 @@ namespace SRM.Api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(Guid id)
         {
-            var response = await _reservationService.GetReservationById(id);
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
+            var response = await _reservationService.GetReservationById(id, userId.Value);
             return response.ToActionResult();
         }
 

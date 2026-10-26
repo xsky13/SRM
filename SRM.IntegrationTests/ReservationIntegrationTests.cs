@@ -149,6 +149,26 @@ public class ReservationIntegrationTests : IClassFixture<CustomWebApplicationFac
         return reservation.Id;
     }
 
+    private static async Task<Guid> CreateReservationNoAuthAsync(HttpClient client, Guid apartmentId, DateTime checkInDate, DateTime checkOutDate)
+    {
+        var response = await client.PostAsJsonAsync("/api/Reservation", new CreateReservationRequestDto
+        {
+            ApartmentId = apartmentId,
+            CheckInDate = checkInDate,
+            CheckOutDate = checkOutDate
+        });
+
+        var body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().BeOneOf(new[] { HttpStatusCode.OK, HttpStatusCode.Created }, "Error body: {0}", body);
+
+        var reservation = await response.Content.ReadFromJsonAsync<Reservation>();
+        reservation.Should().NotBeNull();
+        reservation!.Id.Should().NotBe(Guid.Empty);
+
+        return reservation.Id;
+    }
+
+
     [Fact]
     public async Task CreateReservation_WithAuth_ReturnsSuccess()
     {
@@ -179,7 +199,7 @@ public class ReservationIntegrationTests : IClassFixture<CustomWebApplicationFac
 
         using var userClient = await CreateUserClientAsync();
 
-        await CreateReservationAsync(userClient, apartmentId, new DateTime(2026, 10, 17), new DateTime(2026, 10, 20));
+        await CreateReservationNoAuthAsync(userClient, apartmentId, new DateTime(2026, 10, 17), new DateTime(2026, 10, 20));
 
         var overlapResponse = await userClient.PostAsJsonAsync("/api/Reservation/with_auth", new CreateReservationRequestDto
         {

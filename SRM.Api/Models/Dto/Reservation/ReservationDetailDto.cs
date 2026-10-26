@@ -13,6 +13,7 @@ namespace SRM.Api.Models.Dto.Reservation
         public ReservationState State { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
+        public Guid AppUserId { get; set; }
         public List<PaymentDto> Payments { get; set; }
         public ApartmentListingDto Apartment { get; set; }
         //public string ApartmentName { get; set; }
