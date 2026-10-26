@@ -1,4 +1,7 @@
-﻿namespace SRM.Api.Models.Dto.Payment
+﻿using SRM.Api.Utils;
+using System.Text.Json.Serialization;
+
+namespace SRM.Api.Models.Dto.Payment
 {
     public class Data
     {
@@ -9,6 +12,7 @@
         public int Id { get; set; }
         public bool Live_mode { get; set; }
         public string Type { get; set; }
+        [JsonConverter(typeof(UtcDateJsonConverter))]
         public DateTime Date_created { get; set; }
         public int User_id { get; set; }
         public string Api_version{ get; set; }

@@ -157,7 +157,7 @@ namespace SRM.Api.Controllers
 
 
         [HttpPost("cancel/{reservationId}")]
-        public async Task<ActionResult<Reservation>> CancelReservation(Guid reservationId)
+        public async Task<ActionResult<ReservationDetailDto>> CancelReservation(Guid reservationId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 

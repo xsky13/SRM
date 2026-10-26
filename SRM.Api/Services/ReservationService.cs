@@ -308,27 +308,27 @@ namespace SRM.Api.Services
         }
         
 
-        public async Task<Result<Reservation>> CancelReservation(Guid reservationId, Guid userId)
+        public async Task<Result<ReservationDetailDto>> CancelReservation(Guid reservationId, Guid userId)
         {
             var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
-                return Result<Reservation>.Fail("Usuario no encontrado.", 401);
+                return Result<ReservationDetailDto>.Fail("Usuario no encontrado.", 401);
 
             var reservation = await _db.Reservations
                 .Include(r => r.Payments)
                 .FirstOrDefaultAsync(r => r.Id == reservationId);
             if (reservation == null)
-                return Result<Reservation>.Fail("No se encontró la reserva.", 404);
+                return Result<ReservationDetailDto>.Fail("No se encontró la reserva.", 404);
 
             // dueño o el que hizo la reserva puede cancelarla
-            if (user.Usertype == UserType.Admin || reservation.AppUserId == userId)
-                return Result<Reservation>.Fail("No tenés permiso para cancelar esta reserva.", 403);
+            if (user.Usertype != UserType.Admin && reservation.AppUserId != userId)
+                return Result<ReservationDetailDto>.Fail("No tenés permiso para cancelar esta reserva.", 403);
 
             if (reservation.State == ReservationState.Cancelled)
-                return Result<Reservation>.Fail("La reserva ya está cancelada.", 400);
+                return Result<ReservationDetailDto>.Fail("La reserva ya está cancelada.", 400);
 
             if (DateTime.UtcNow > reservation.CheckInDate.AddHours(-24))
-                return Result<Reservation>.Fail(
+                return Result<ReservationDetailDto>.Fail(
                     $"No se puede cancelar: faltan menos de 24 hs para el check-in ({reservation.CheckInDate:dd/MM/yyyy HH:mm}).",
                     400);
 
@@ -349,7 +349,7 @@ namespace SRM.Api.Services
 
             await _db.SaveChangesAsync();
 
-            return Result<Reservation>.Ok(reservation);
+            return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
     }
 }
