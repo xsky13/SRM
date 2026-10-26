@@ -5,7 +5,7 @@ namespace SRM.Api.Models.Dto.Apartment
 {
     public class AddImagesDto
     {
-        // Agregamos "= new List<IFormFile>();" para evitar el warning
+        // Debe ser IFormFile para recibir archivos físicos
         public List<IFormFile> Images { get; set; } = new List<IFormFile>();
     }
 }

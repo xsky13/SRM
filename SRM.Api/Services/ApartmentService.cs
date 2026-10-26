@@ -5,7 +5,9 @@ using SRM.Api.Models.Entities;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using SRM.Api.Models.Enums;
+using SRM.Api.Models.Dto.Images;
 using Microsoft.Extensions.Hosting; // Nueva directiva usando agregada
+using System.IO;
 
 namespace SRM.Api.Services
 {
@@ -167,21 +169,22 @@ namespace SRM.Api.Services
             return Result<Apartment>.Ok(apartment);
         }
 
-        public async Task<Result<List<Models.Dto.Images.ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto)
+        public async Task<Result<List<ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto)
         {
             var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
 
             if (apartment == null)
-                return Result<List<Models.Dto.Images.ImageDto>>.Fail("No se encontró el departamento", 404);
+                return Result<List<ImageDto>>.Fail("No se encontró el departamento", 404);
 
             if (apartment.IsDeleted)
-                return Result<List<Models.Dto.Images.ImageDto>>.Fail("No se encontró el departamento", 404);
+                return Result<List<ImageDto>>.Fail("No se encontró el departamento", 404);
 
             if (dto.Images == null || dto.Images.Count == 0)
-                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Debe proporcionar al menos una imagen.", 400);
+                return Result<List<ImageDto>>.Fail("Debe proporcionar al menos una imagen.", 400);
 
             // 1. Definir la ruta física donde se guardarán las imágenes en el contenedor
             var imagesPath = Path.Combine(_env.ContentRootPath, "Storage", "Images");
+            Directory.CreateDirectory(imagesPath);
 
             // Crear nuevas imágenes
             var newImages = new List<Image>();
@@ -213,13 +216,13 @@ namespace SRM.Api.Services
             }
 
             if (newImages.Count == 0)
-                return Result<List<Models.Dto.Images.ImageDto>>.Fail("Las imágenes proporcionadas no son válidas o están vacías.", 400);
+                return Result<List<ImageDto>>.Fail("Las imágenes proporcionadas no son válidas o están vacías.", 400);
 
             await _db.SaveChangesAsync();
 
             // Retornar las imágenes creadas como DTOs
-            var imageDtos = newImages.Select(i => new Models.Dto.Images.ImageDto(i.Id, i.Url, i.ApartmentId)).ToList();
-            return Result<List<Models.Dto.Images.ImageDto>>.Ok(imageDtos);
+            var imageDtos = newImages.Select(i => new ImageDto(i.Id, i.Url, i.ApartmentId)).ToList();
+            return Result<List<ImageDto>>.Ok(imageDtos);
         }
 
         public async Task<Result<bool>> RemoveImagesAsync(Guid id, RemoveImagesDto dto)

@@ -74,7 +74,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpPost("{id}/images")]
-        public async Task<ActionResult<List<Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromForm] AddImagesDto request)
+        public async Task<ActionResult<List<SRM.Api.Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromForm] AddImagesDto request)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();

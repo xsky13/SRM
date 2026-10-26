@@ -15,8 +15,7 @@ namespace SRM.Api.Services.Interfaces
         Task<Result<Apartment>> CreateApartmentAsync(CreateApartmentDto dto);
         Task<Result<Apartment>> UpdateApartmentAsync(Guid id, UpdateApartmentDto dto);
 
-        // Esta línea es la que soluciona el error:
-        Task<Result<List<Models.Dto.Images.ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto);
+        Task<Result<List<SRM.Api.Models.Dto.Images.ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto);
         Task<Result<bool>> RemoveImagesAsync(Guid id, RemoveImagesDto dto);
         Task<Result<Apartment>> DeleteApartmentAsync(Guid id);
     }
