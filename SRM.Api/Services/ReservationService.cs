@@ -110,6 +110,25 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
+        public async Task<Result<List<ReservationListingDto>>> GetAllForAdmin()
+        {
+            var reservations = await _db.Reservations
+                .AsNoTracking()
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new ReservationListingDto
+                {
+                    Id = r.Id,
+                    CheckInDate = r.CheckInDate,
+                    CheckOutDate = r.CheckOutDate,
+                    ApartmentId = r.ApartmentId,
+                    ApartmentName = r.Apartment.Name,
+                    ReservationState = r.State
+                })
+                .ToListAsync();
+
+            return Result<List<ReservationListingDto>>.Ok(reservations);
+        }
+
         public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null)
         {
             /*
@@ -218,17 +237,28 @@ namespace SRM.Api.Services
                     return Result<Reservation>.Fail("La información del usuario Guest es obligatoria.");
 
                 var guestInfo = request.GuestUserInfo;
-                var emailExists = await _db.AppUsers.AnyAsync(u => u.Email == guestInfo.Email);
+                if (string.IsNullOrWhiteSpace(guestInfo.FirstName) ||
+                    string.IsNullOrWhiteSpace(guestInfo.LastName) ||
+                    string.IsNullOrWhiteSpace(guestInfo.Telefono) ||
+                    string.IsNullOrWhiteSpace(guestInfo.Email))
+                {
+                    return Result<Reservation>.Fail("Los datos del usuario Guest son obligatorios.");
+                }
+
+                var email = guestInfo.Email.Trim();
+                var emailExists = await _db.AppUsers
+                    .IgnoreQueryFilters()
+                    .AnyAsync(u => u.Email.ToLower() == email.ToLower());
                 if (emailExists)
                     return Result<Reservation>.Fail("Ya existe un usuario con ese email.");
 
                 var guestUser = new AppUser
                 {
                     Id = Guid.NewGuid(),
-                    Name = guestInfo.FirstName,
-                    LastName = guestInfo.LastName,
-                    Telefono = guestInfo.Telefono,
-                    Email = guestInfo.Email,
+                    Name = guestInfo.FirstName.Trim(),
+                    LastName = guestInfo.LastName.Trim(),
+                    Telefono = guestInfo.Telefono.Trim(),
+                    Email = email,
                     PwdHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
                     Usertype = UserType.Guest
                 };

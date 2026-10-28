@@ -102,6 +102,17 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [HttpGet("~/api/booking")]
+        public async Task<ActionResult<List<ReservationListingDto>>> GetAllReservationsForAdmin()
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.GetAllForAdmin();
+            return response.ToActionResult();
+        }
+
+        [Authorize]
         [HttpDelete("~/api/booking/{id}/admin")]
         public async Task<ActionResult<ReservationDetailDto>> AdminCancelReservation(Guid id)
         {
