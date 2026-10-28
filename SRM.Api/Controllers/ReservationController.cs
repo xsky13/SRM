@@ -1,19 +1,22 @@
 ﻿using SRM.Api.Models.Dto.Apartment;
+using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using SRM.Api.Utils;
 using SRM.Api.Models.Entities;
+using SRM.Api.Models.Enums;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ReservationController(IReservationService _reservationService, IUserService _userService) : ControllerBase
+    public class ReservationController(IReservationService _reservationService, IUserService _userService, IPaymentService _paymentService) : ControllerBase
     {
         [HttpGet("{id}")]
         public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(Guid id)
@@ -85,6 +88,50 @@ namespace SRM.Api.Controllers
 
             return response.ToActionResult();
 
+        }
+
+        [Authorize]
+        [HttpPost("admin_create")]
+        public async Task<ActionResult<Reservation>> AdminCreateReservation([FromBody] AdminCreateReservationDto request)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.AdminCreateReservationAsync(request);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<List<ReservationListingDto>>> GetAllReservationsForAdmin()
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.GetAllForAdmin();
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpDelete("{id}/admin")]
+        public async Task<ActionResult<ReservationDetailDto>> AdminCancelReservation(Guid id)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.AdminCancelReservationAsync(id);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpPost("{id}/add_payment_admin")]
+        public async Task<ActionResult<PaymentDto>> AdminAddPayment([FromBody] AdminAddPaymentDto request, Guid id)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _paymentService.AdminAddPaymentAsync(id, request);
+            return response.ToActionResult();
         }
 
         [HttpPut("{reservationId}")]

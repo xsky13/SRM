@@ -7,7 +7,7 @@ services:
     ports:
       - "5000:8080"
     volumes:
-      - api_images:/app/storage/images
+      - api_images:/app/Storage/Images
       - api_logs:/app/logs
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

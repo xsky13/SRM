@@ -12,6 +12,7 @@ namespace SRM.Api.Services.Interfaces
         Task<Result<bool>> ValidateUser(AppUser user);
         Task<bool> UserExists(Guid userId);
         Task<Result<UserListingDto>> GetUser(Guid userId);
+        Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, int limit);
         Task DeleteUser(Guid userId);
     }
 }

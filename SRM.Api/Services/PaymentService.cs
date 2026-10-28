@@ -1,5 +1,4 @@
-﻿using MercadoPago.Client.Payment;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Entities;
@@ -32,10 +31,8 @@ namespace SRM.Api.Services
             }
 
             // actualizar estado del pago
-            var client = new PaymentClient();
-            var mpPayment = await client.GetAsync(mpPaymentId);
-
-            var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
+            var latestStatus = await _bankService.GetAsync(mpPaymentId);
+            var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(latestStatus);
             if (payment.PaymentStatus == newStatus) return;
             payment.PaymentStatus = newStatus;
 
@@ -101,6 +98,63 @@ namespace SRM.Api.Services
                     // TODO: llamar servicio de ticket
                 }
             }
+        }
+
+        public async Task<Result<PaymentDto>> AdminAddPaymentAsync(Guid reservationId, AdminAddPaymentDto request)
+        {
+            var reservation = await _db.Reservations
+                .Include(r => r.Apartment)
+                .FirstOrDefaultAsync(r => r.Id == reservationId);
+
+            if (reservation == null)
+                return Result<PaymentDto>.Fail("No se encontro la reserva", 404);
+
+            if (reservation.State != ReservationState.NotConfirmed && reservation.State != ReservationState.ConfirmedPaymentIncomplete)
+                return Result<PaymentDto>.Fail("No se puede agregar un pago a una reserva cancelada.");
+
+            if (reservation.State == ReservationState.NotConfirmed)
+            {
+                var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId, reservation.Id);
+                if (conflicting) return Result<PaymentDto>.Fail("Las fechas de esta reserva ya no estan disponibles.");
+            }
+
+            var totalReservationCost = ((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1) * reservation.Apartment.Price;
+            var paid = await _db.Payments
+                .Where(p => p.ReservationId == reservation.Id && p.PaymentStatus == PaymentStatus.Approved)
+                .SumAsync(p => p.Amount);
+
+            var amount = totalReservationCost - paid;
+            if (amount <= 0)
+                return Result<PaymentDto>.Fail("La reserva ya esta pagada.");
+
+            var payment = new Payment
+            {
+                Id = Guid.NewGuid(),
+                Amount = amount,
+                IsManual = true,
+                IsSign = false,
+                PaymentDate = DateTime.UtcNow,
+                PaymentStatus = PaymentStatus.Approved,
+                ReservationId = reservation.Id,
+                AppUserId = reservation.AppUserId
+            };
+
+            _db.Payments.Add(payment);
+
+            reservation.State = ReservationState.ConfirmedPaymentComplete;
+            reservation.UpdatedAt = DateTime.UtcNow;
+
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                return Result<PaymentDto>.Fail("Las fechas de esta reserva ya no estan disponibles.");
+            }
+
+            return Result<PaymentDto>.Ok(payment.ToDto());
         }
 
 
