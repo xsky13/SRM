@@ -86,5 +86,37 @@ namespace SRM.Api.Services
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
 
+        public async Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, int limit)
+        {
+            if (limit <= 0)
+                return Result<List<UserSearchDto>>.Fail("El límite debe ser mayor que cero.");
+
+            var usersQuery = _db.AppUsers
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                usersQuery = usersQuery.Where(u =>
+                    u.Name.Contains(query) ||
+                    u.LastName.Contains(query) ||
+                    u.Email.Contains(query));
+            }
+
+            var users = await usersQuery
+                .Take(limit)
+                .Select(u => new UserSearchDto
+                {
+                    Id = u.Id,
+                    FirstName = u.Name,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    Telefono = u.Telefono
+                })
+                .ToListAsync();
+
+            return Result<List<UserSearchDto>>.Ok(users);
+        }
+
     }
 }
