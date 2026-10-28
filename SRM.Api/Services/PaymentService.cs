@@ -102,24 +102,35 @@ namespace SRM.Api.Services
 
         public async Task<Result<PaymentDto>> AdminAddPaymentAsync(Guid reservationId, AdminAddPaymentDto request)
         {
-            if (request.Amount <= 0)
-                return Result<PaymentDto>.Fail("El monto del pago debe ser mayor a cero.");
-
             var reservation = await _db.Reservations
                 .Include(r => r.Apartment)
-                .Include(r => r.Payments)
                 .FirstOrDefaultAsync(r => r.Id == reservationId);
 
             if (reservation == null)
                 return Result<PaymentDto>.Fail("No se encontro la reserva", 404);
 
-            if (reservation.State == ReservationState.Cancelled)
+            if (reservation.State != ReservationState.NotConfirmed && reservation.State != ReservationState.ConfirmedPaymentIncomplete)
                 return Result<PaymentDto>.Fail("No se puede agregar un pago a una reserva cancelada.");
+
+            if (reservation.State == ReservationState.NotConfirmed)
+            {
+                var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId, reservation.Id);
+                if (conflicting) return Result<PaymentDto>.Fail("Las fechas de esta reserva ya no estan disponibles.");
+            }
+
+            var totalReservationCost = ((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1) * reservation.Apartment.Price;
+            var paid = await _db.Payments
+                .Where(p => p.ReservationId == reservation.Id && p.PaymentStatus == PaymentStatus.Approved)
+                .SumAsync(p => p.Amount);
+
+            var amount = totalReservationCost - paid;
+            if (amount <= 0)
+                return Result<PaymentDto>.Fail("La reserva ya esta pagada.");
 
             var payment = new Payment
             {
                 Id = Guid.NewGuid(),
-                Amount = request.Amount,
+                Amount = amount,
                 IsManual = true,
                 IsSign = false,
                 PaymentDate = DateTime.UtcNow,
@@ -130,18 +141,18 @@ namespace SRM.Api.Services
 
             _db.Payments.Add(payment);
 
-            var totalPaid = reservation.Payments
-                .Where(p => p.PaymentStatus == PaymentStatus.Approved)
-                .Sum(p => p.Amount) + payment.Amount;
-            var totalCost = Math.Max((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1, 1)
-                * reservation.Apartment.Price;
-
-            reservation.State = totalPaid >= totalCost
-                ? ReservationState.ConfirmedPaymentComplete
-                : ReservationState.ConfirmedPaymentIncomplete;
+            reservation.State = ReservationState.ConfirmedPaymentComplete;
             reservation.UpdatedAt = DateTime.UtcNow;
 
-            await _db.SaveChangesAsync();
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                return Result<PaymentDto>.Fail("Las fechas de esta reserva ya no estan disponibles.");
+            }
 
             return Result<PaymentDto>.Ok(payment.ToDto());
         }
