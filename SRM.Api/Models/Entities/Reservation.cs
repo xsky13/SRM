@@ -27,7 +27,7 @@ namespace SRM.Api.Models.Entities
         {
             return new ReservationDetailDto
             {
-                ResrevationId = Id,
+                ReservationId = Id,
                 CheckInDate = CheckInDate,
                 CheckOutDate = CheckOutDate,
                 ApartmentId = ApartmentId,

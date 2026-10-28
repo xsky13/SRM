@@ -232,7 +232,7 @@ namespace SRM.Api.Services
                 // check for conflicting dates
                 var conflicting = await _reservationService.DatesAreInvalid(reservation.CheckOutDate, reservation.CheckInDate, reservation.ApartmentId, reservation.Id);
                 if (conflicting)
-                    return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas");
+                    return Result<PaymentWithUserEmailDto>.Fail("Las fechas son invalidas.");
 
                 reservation.State = ReservationState.PaymentPending; // lock down the reservation dates during payment so nobody else takes them.
             }
@@ -286,7 +286,7 @@ namespace SRM.Api.Services
         {
             // reservation already exists
             var existingReservation = await GetPayableReservation(reservationId, userId, ReservationState.ConfirmedPaymentIncomplete);
-            if (!existingReservation.Success) return Result<PaymentWithUserEmailDto>.Fail("La reserva no existe");
+            if (!existingReservation.Success) return Result<PaymentWithUserEmailDto>.Fail(existingReservation.Error!);
             var reservation = existingReservation.Value!;
             var prevState = reservation.State;
 

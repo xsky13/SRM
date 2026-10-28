@@ -6,7 +6,7 @@ namespace SRM.Api.Models.Dto.Reservation
 {
     public class ReservationDetailDto
     {
-        public Guid ResrevationId { get; set; }
+        public Guid ReservationId { get; set; }
         public DateTime CheckInDate { get; set; }
         public DateTime CheckOutDate { get; set; }
         public Guid ApartmentId { get; set; }
@@ -16,7 +16,6 @@ namespace SRM.Api.Models.Dto.Reservation
         public Guid AppUserId { get; set; }
         public List<PaymentDto> Payments { get; set; }
         public ApartmentListingDto Apartment { get; set; }
-        //public string ApartmentName { get; set; }
         public decimal FullCost { get; set; }
     }
 }

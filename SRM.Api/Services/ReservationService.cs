@@ -23,7 +23,7 @@ namespace SRM.Api.Services
                 .Where(r => r.Id == reservationId)
                 .Select(r => new ReservationDetailDto
                 {
-                    ResrevationId = r.Id,
+                    ReservationId = r.Id,
                     CheckInDate = r.CheckInDate,
                     CheckOutDate = r.CheckOutDate,
                     ApartmentId = r.ApartmentId,
@@ -184,12 +184,6 @@ namespace SRM.Api.Services
             await _db.SaveChangesAsync();
 
             return Result<Reservation>.Ok(reservation);
-        }
-
-
-        public async Task SaveChanges()
-        {
-            await _db.SaveChangesAsync();
         }
 
 
