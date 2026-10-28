@@ -100,6 +100,52 @@ namespace SRM.Api.Services
             }
         }
 
+        public async Task<Result<PaymentDto>> AdminAddPaymentAsync(Guid reservationId, AdminAddPaymentDto request)
+        {
+            if (request.Amount <= 0)
+                return Result<PaymentDto>.Fail("El monto del pago debe ser mayor a cero.");
+
+            var reservation = await _db.Reservations
+                .Include(r => r.Apartment)
+                .Include(r => r.Payments)
+                .FirstOrDefaultAsync(r => r.Id == reservationId);
+
+            if (reservation == null)
+                return Result<PaymentDto>.Fail("No se encontro la reserva", 404);
+
+            if (reservation.State == ReservationState.Cancelled)
+                return Result<PaymentDto>.Fail("No se puede agregar un pago a una reserva cancelada.");
+
+            var payment = new Payment
+            {
+                Id = Guid.NewGuid(),
+                Amount = request.Amount,
+                IsManual = true,
+                IsSign = false,
+                PaymentDate = DateTime.UtcNow,
+                PaymentStatus = PaymentStatus.Approved,
+                ReservationId = reservation.Id,
+                AppUserId = reservation.AppUserId
+            };
+
+            _db.Payments.Add(payment);
+
+            var totalPaid = reservation.Payments
+                .Where(p => p.PaymentStatus == PaymentStatus.Approved)
+                .Sum(p => p.Amount) + payment.Amount;
+            var totalCost = Math.Max((reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1, 1)
+                * reservation.Apartment.Price;
+
+            reservation.State = totalPaid >= totalCost
+                ? ReservationState.ConfirmedPaymentComplete
+                : ReservationState.ConfirmedPaymentIncomplete;
+            reservation.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            return Result<PaymentDto>.Ok(payment.ToDto());
+        }
+
 
 
         private async Task<Result<Reservation>> GetPayableReservation(Guid reservationId, Guid? userId, ReservationState required)

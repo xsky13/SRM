@@ -1,4 +1,5 @@
 ﻿using SRM.Api.Models.Dto.Apartment;
+using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Services.Interfaces;
 using System;
@@ -15,7 +16,7 @@ namespace SRM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ReservationController(IReservationService _reservationService, IUserService _userService) : ControllerBase
+    public class ReservationController(IReservationService _reservationService, IUserService _userService, IPaymentService _paymentService) : ControllerBase
     {
         [HttpGet("{id}")]
         public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(Guid id)
@@ -97,6 +98,28 @@ namespace SRM.Api.Controllers
                 return Forbid();
 
             var response = await _reservationService.AdminCreateReservationAsync(request);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpDelete("~/api/booking/{id}/admin")]
+        public async Task<ActionResult<ReservationDetailDto>> AdminCancelReservation(Guid id)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.AdminCancelReservationAsync(id);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpPost("~/api/booking/{id}/add_payment_admin")]
+        public async Task<ActionResult<PaymentDto>> AdminAddPayment([FromBody] AdminAddPaymentDto request, Guid id)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _paymentService.AdminAddPaymentAsync(id, request);
             return response.ToActionResult();
         }
 

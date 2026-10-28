@@ -432,6 +432,25 @@ namespace SRM.Api.Services
 
             return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
+
+        public async Task<Result<ReservationDetailDto>> AdminCancelReservationAsync(Guid reservationId)
+        {
+            var reservation = await _db.Reservations
+                .Include(r => r.Payments)
+                .FirstOrDefaultAsync(r => r.Id == reservationId);
+            if (reservation == null)
+                return Result<ReservationDetailDto>.Fail("No se encontró la reserva.", 404);
+
+            if (reservation.State == ReservationState.Cancelled)
+                return Result<ReservationDetailDto>.Fail("La reserva ya está cancelada.", 400);
+
+            reservation.State = ReservationState.Cancelled;
+            reservation.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
+        }
     }
 }
 
