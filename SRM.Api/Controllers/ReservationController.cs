@@ -91,7 +91,7 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
-        [HttpPost("~/api/booking/admin_create")]
+        [HttpPost("admin_create")]
         public async Task<ActionResult<Reservation>> AdminCreateReservation([FromBody] AdminCreateReservationDto request)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
@@ -102,7 +102,7 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
-        [HttpGet("~/api/booking")]
+        [HttpGet]
         public async Task<ActionResult<List<ReservationListingDto>>> GetAllReservationsForAdmin()
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
@@ -113,7 +113,7 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
-        [HttpDelete("~/api/booking/{id}/admin")]
+        [HttpDelete("{id}/admin")]
         public async Task<ActionResult<ReservationDetailDto>> AdminCancelReservation(Guid id)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
@@ -124,7 +124,7 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
-        [HttpPost("~/api/booking/{id}/add_payment_admin")]
+        [HttpPost("{id}/add_payment_admin")]
         public async Task<ActionResult<PaymentDto>> AdminAddPayment([FromBody] AdminAddPaymentDto request, Guid id)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
