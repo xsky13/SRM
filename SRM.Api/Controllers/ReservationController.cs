@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using SRM.Api.Utils;
 using SRM.Api.Models.Entities;
+using SRM.Api.Models.Enums;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers
@@ -85,6 +87,17 @@ namespace SRM.Api.Controllers
 
             return response.ToActionResult();
 
+        }
+
+        [Authorize]
+        [HttpPost("~/api/booking/admin_create")]
+        public async Task<ActionResult<Reservation>> AdminCreateReservation([FromBody] AdminCreateReservationDto request)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.AdminCreateReservationAsync(request);
+            return response.ToActionResult();
         }
 
         [HttpPut("{reservationId}")]

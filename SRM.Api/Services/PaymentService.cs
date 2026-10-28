@@ -1,5 +1,4 @@
-﻿using MercadoPago.Client.Payment;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Entities;
@@ -32,10 +31,8 @@ namespace SRM.Api.Services
             }
 
             // actualizar estado del pago
-            var client = new PaymentClient();
-            var mpPayment = await client.GetAsync(mpPaymentId);
-
-            var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(mpPayment.Status);
+            var latestStatus = await _bankService.GetAsync(mpPaymentId);
+            var newStatus = PaymentStatusMapper.MapMercadoPagoStatus(latestStatus);
             if (payment.PaymentStatus == newStatus) return;
             payment.PaymentStatus = newStatus;
 

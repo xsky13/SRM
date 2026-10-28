@@ -68,5 +68,11 @@ namespace SRM.Api.Services
             return Result<Payment>.Ok(dbPayment);
         }
 
+        public async Task<string> GetAsync(long mpPaymentId)
+        {
+            var client = new PaymentClient();
+            var mpPayment = await client.GetAsync(mpPaymentId);
+            return mpPayment.Status;
+        }
     }
 }

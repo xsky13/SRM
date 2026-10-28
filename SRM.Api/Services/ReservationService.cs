@@ -186,6 +186,84 @@ namespace SRM.Api.Services
             return Result<Reservation>.Ok(reservation);
         }
 
+        public async Task<Result<Reservation>> AdminCreateReservationAsync(AdminCreateReservationDto request)
+        {
+            var apartmentExists = await _db.Apartments.AnyAsync(a => a.Id == request.ApartmentId);
+            if (!apartmentExists)
+                return Result<Reservation>.Fail("El departamento no existe.", 404);
+
+            if (request.EndDate.Date < request.StartDate.Date)
+                return Result<Reservation>.Fail("La fecha de salida no puede ser anterior a la de entrada.");
+
+            var datesInvalid = await DatesAreInvalid(request.EndDate, request.StartDate, request.ApartmentId);
+            if (datesInvalid)
+                return Result<Reservation>.Fail("Ya hay una reserva con estas fechas.");
+
+            Guid userId;
+
+            if (request.IsRegisteredUser)
+            {
+                if (request.UserId == null)
+                    return Result<Reservation>.Fail("El usuario registrado es obligatorio.");
+
+                var registeredUserExists = await _db.AppUsers.AnyAsync(u => u.Id == request.UserId.Value);
+                if (!registeredUserExists)
+                    return Result<Reservation>.Fail("El usuario no existe.", 404);
+
+                userId = request.UserId.Value;
+            }
+            else
+            {
+                if (request.GuestUserInfo == null)
+                    return Result<Reservation>.Fail("La información del usuario Guest es obligatoria.");
+
+                var guestInfo = request.GuestUserInfo;
+                var emailExists = await _db.AppUsers.AnyAsync(u => u.Email == guestInfo.Email);
+                if (emailExists)
+                    return Result<Reservation>.Fail("Ya existe un usuario con ese email.");
+
+                var guestUser = new AppUser
+                {
+                    Id = Guid.NewGuid(),
+                    Name = guestInfo.FirstName,
+                    LastName = guestInfo.LastName,
+                    Telefono = guestInfo.Telefono,
+                    Email = guestInfo.Email,
+                    PwdHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+                    Usertype = UserType.Guest
+                };
+
+                _db.AppUsers.Add(guestUser);
+                userId = guestUser.Id;
+            }
+
+            var reservation = new Reservation
+            {
+                Id = Guid.NewGuid(),
+                CheckInDate = request.StartDate,
+                CheckOutDate = request.EndDate,
+                State = ReservationState.ConfirmedPaymentIncomplete,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                ApartmentId = request.ApartmentId,
+                AppUserId = userId
+            };
+
+            _db.Reservations.Add(reservation);
+
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.IsOverlap())
+            {
+                _db.ChangeTracker.Clear();
+                return Result<Reservation>.Fail("Ya hay una reserva con estas fechas.");
+            }
+
+            return Result<Reservation>.Ok(reservation);
+        }
+
 
         public async Task SaveChanges()
         {
