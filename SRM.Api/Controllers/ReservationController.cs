@@ -16,7 +16,7 @@ namespace SRM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ReservationController(IReservationService _reservationService, IUserService _userService, IPaymentService _paymentService) : ControllerBase
+    public class ReservationController(IReservationService _reservationService, IUserService _userService, IPaymentService _paymentService, IMailService _mailService) : ControllerBase
     {
         [HttpGet("{id}")]
         public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(Guid id)

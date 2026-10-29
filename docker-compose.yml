@@ -15,6 +15,7 @@ services:
       - ApiSettings__Audience=${AUDIENCE}
       - Jwt__Key=${SECRET_KEY}
       - ConnectionStrings__DatabaseConnectionString=Host=postgres;username=${POSTGRES_USER};password=${POSTGRES_PASSWORD};database=${POSTGRES_DB};
+      - GMAIL_PASSWORD=${GMAIL_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
