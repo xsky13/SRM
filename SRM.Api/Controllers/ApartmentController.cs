@@ -29,7 +29,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Apartment>> CreateApartment([FromBody] CreateApartmentDto request)
+        public async Task<ActionResult<ApartmentDetailsDto>> CreateApartment([FromForm] CreateApartmentDto request)
         {
             // Extraer el userId del claim del token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

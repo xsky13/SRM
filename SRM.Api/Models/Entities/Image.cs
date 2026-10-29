@@ -1,4 +1,6 @@
-﻿namespace SRM.Api.Models.Entities
+﻿using SRM.Api.Models.Dto.Images;
+
+namespace SRM.Api.Models.Entities
 {
     public class Image : ISoftDeletable
     {
@@ -10,5 +12,14 @@
 
         public bool IsDeleted { get; set; }
         public DateTime? DeletedOnUTC { get; set; }
+
+        public ImageDto ToDto()
+        {
+            return new ImageDto(
+                Id,
+                Url,
+                ApartmentId
+            );
+        }
     }
 }

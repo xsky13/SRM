@@ -1,4 +1,6 @@
-﻿namespace SRM.Api.Models.Entities
+﻿using SRM.Api.Models.Dto.Apartment;
+
+namespace SRM.Api.Models.Entities
 {
     public class Apartment : ISoftDeletable
     {
@@ -14,5 +16,20 @@
         public DateTime? DeletedOnUTC { get; set; }
         public List<Image> Images { get; set; } = [];
         public List<Reservation> Reservations { get; set; } = [];
+
+        public ApartmentDetailsDto ToDetailsDto()
+        {
+            return new ApartmentDetailsDto(
+                Id,
+                Name,
+                Description,
+                Price,
+                Location,
+                CoverImgUrl,
+                Latitude,
+                Longitude,
+                Images.Select(image => image.ToDto()).ToList()
+            );
+        }
     }
 }

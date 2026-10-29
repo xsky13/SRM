@@ -66,7 +66,7 @@ namespace SRM.Api.Services
             return Result<ApartmentDetailsDto>.Ok(apartment);
         }
 
-        public async Task<Result<Apartment>> CreateApartmentAsync(CreateApartmentDto dto)
+        public async Task<Result<ApartmentDetailsDto>> CreateApartmentAsync(CreateApartmentDto dto)
         {
             /*
             // Obtener el usuario de la base de datos no es necesario por que la autenticación y autorización se manejan en el controlador
@@ -81,22 +81,16 @@ namespace SRM.Api.Services
 
             // Validar campos del DTO
             if (string.IsNullOrWhiteSpace(dto.Name) || dto.Name.Length < 3 || dto.Name.Length > 100)
-                return Result<Apartment>.Fail("El nombre del departamento debe tener entre 3 y 100 caracteres.", 400);
+                return Result<ApartmentDetailsDto>.Fail("El nombre del departamento debe tener entre 3 y 100 caracteres.", 400);
 
             if (string.IsNullOrWhiteSpace(dto.Description) || dto.Description.Length < 10 || dto.Description.Length > 1000)
-                return Result<Apartment>.Fail("La descripción debe tener entre 10 y 1000 caracteres.", 400);
+                return Result<ApartmentDetailsDto>.Fail("La descripción debe tener entre 10 y 1000 caracteres.", 400);
 
             if (dto.Price <= 0)
-                return Result<Apartment>.Fail("El precio debe ser mayor a 0.", 400);
+                return Result<ApartmentDetailsDto>.Fail("El precio debe ser mayor a 0.", 400);
 
             if (string.IsNullOrWhiteSpace(dto.Location) || dto.Location.Length < 5 || dto.Location.Length > 100)
-                return Result<Apartment>.Fail("La ubicación debe tener entre 5 y 100 caracteres.", 400);
-
-            if (string.IsNullOrWhiteSpace(dto.CoverImgUrl))
-                return Result<Apartment>.Fail("La imagen de portada es requerida.", 400);
-
-            if (dto.CoverImgUrl == null)
-                return Result<Apartment>.Fail("Debe proporcionar una imagen.", 400);
+                return Result<ApartmentDetailsDto>.Fail("La ubicación debe tener entre 5 y 100 caracteres.", 400);
 
             // Crear la entidad Apartment
             var apartment = new Apartment
@@ -106,7 +100,6 @@ namespace SRM.Api.Services
                 Description = dto.Description,
                 Price = dto.Price,
                 Location = dto.Location,
-                CoverImgUrl = dto.CoverImgUrl,
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
             };
@@ -114,7 +107,11 @@ namespace SRM.Api.Services
             _db.Apartments.Add(apartment);
             await _db.SaveChangesAsync();
 
-            return Result<Apartment>.Ok(apartment);
+            // crear imagenes (ya se llama _db.SaveChangesAsync() en este metodo
+            var createImagesResult = await AddImagesAsync(apartment.Id, new AddImagesDto {  Images = dto.Images }, true);
+            if (!createImagesResult.Success) return Result<ApartmentDetailsDto>.Fail(createImagesResult.Error!);
+
+            return Result<ApartmentDetailsDto>.Ok(apartment.ToDetailsDto());
         }
 
         public async Task<Result<Apartment>> UpdateApartmentAsync(Guid id, UpdateApartmentDto dto)
@@ -169,7 +166,7 @@ namespace SRM.Api.Services
             return Result<Apartment>.Ok(apartment);
         }
 
-        public async Task<Result<List<ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto)
+        public async Task<Result<List<ImageDto>>> AddImagesAsync(Guid id, AddImagesDto dto, bool creatingApartment = false)
         {
             var apartment = await _db.Apartments.FirstOrDefaultAsync(a => a.Id == id);
 
@@ -235,6 +232,8 @@ namespace SRM.Api.Services
 
             if (newImages.Count == 0)
                 return Result<List<ImageDto>>.Fail("Las imágenes proporcionadas no son válidas o están vacías.", 400);
+
+            if (creatingApartment) apartment.CoverImgUrl = newImages[0].Url;
 
             await _db.SaveChangesAsync();
 
