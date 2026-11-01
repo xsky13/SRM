@@ -8,7 +8,7 @@ using SRM.Api.Utils;
 
 namespace SRM.Api.Services
 {
-    public class PaymentService(AppDbContext _db, IReservationService _reservationService, IBankService _bankService, IUserService _userService, ILogger<GlobalExceptionHandler> logger) : IPaymentService
+    public class PaymentService(AppDbContext _db, IReservationService _reservationService, IBankService _bankService, IUserService _userService, ILogger<GlobalExceptionHandler> logger, IMailService _mailService) : IPaymentService
     {
         public async Task CardPaymentWebhook(PaymentWebhookRequest request)
         {
@@ -56,7 +56,9 @@ namespace SRM.Api.Services
                                 // el pago ya se cobro, quedan las fechas viejas y hay que reembolsar a mano
                                 logger.LogError("Pago {PaymentId} aprobado pero las fechas nuevas de la reserva {ReservationId} ya no estan disponibles", payment.Id, reservation.Id);
                                 reservation.State = payment.PreviousReservationState ?? ReservationState.ConfirmedPaymentIncomplete;
-                                // TODO: avisar al admin
+
+                                await _mailService.SendMail($"El pago de un usuario en la reserva {reservation.Id} fue completado despues de editar las fechas de una reserva, pero en el tiempo que el pago fue confirmado otra persona reservo esas fechas. Debe reembolzarlo con el monto de {payment.Amount}",
+                                    "Reembolzo al usuario", Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("ADMIN_MAIL environment variable is not set."), "Administrador");
                             }
                             else
                             {
@@ -80,6 +82,9 @@ namespace SRM.Api.Services
                     case PaymentStatus.Refunded or PaymentStatus.ChargedBack or PaymentStatus.InMediation:
                         logger.LogError("Pago {PaymentId} paso a {Status} (reserva {ReservationId}): requiere revision manual", payment.Id, newStatus, reservation.Id);
                         // TODO: avisar al admin, decidir que hacer con la reserva
+                        await _mailService.SendMail($"El pago de un usuario en la reserva {reservation.Id} paso a un estado de {newStatus}",
+                                    "Pago rechazado", Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("ADMIN_MAIL environment variable is not set."), "Administrador");
+
                         break;
                 }
 
@@ -93,9 +98,13 @@ namespace SRM.Api.Services
                 reservation.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
 
-                if (newStatus == PaymentStatus.Approved && payment.TicketId == null)
+                if (newStatus == PaymentStatus.Approved)
                 {
+                    var user = await _db.AppUsers.Select(u => new { u.Id, u.Email, u.Name }).Where(u => u.Id == reservation.AppUserId).FirstOrDefaultAsync();
                     // TODO: llamar servicio de ticket
+                    await _mailService.SendMail($"El pago para su reserva desde {reservation.CheckInDate.Date} hasta {reservation.CheckOutDate.Date} fue aprobado",
+                          "Pago aprobado", user.Email, user.Name ?? "Reservador");
+
                 }
             }
         }
@@ -252,7 +261,10 @@ namespace SRM.Api.Services
             catch (DbUpdateException ex) when (ex.IsOverlap())
             {
                 _db.ChangeTracker.Clear();
-                // TODO: notificar al admin que tiene que devolver la plata
+
+                var user = await _db.AppUsers.Select(u => new { u.Id, u.Email, u.Name }).Where(u => u.Id == reservation.AppUserId).FirstOrDefaultAsync();
+                await _mailService.SendMail($"Se efectuo un pago en la reserva {reservation.Id} del usuario con el correo {user.Email}, pero la reserva no se pudo hacer porque justo al momento de pagar, otro usuario la reservo. Debe reembolzar al usuario con el monto de {payment.Amount}",
+                                    "Reembolzo al usuario", Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("ADMIN_MAIL environment variable is not set."), "Administrador");
                 return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas. El administrador lo estara reembolsando en breve.");
             }
 
@@ -321,7 +333,11 @@ namespace SRM.Api.Services
             catch (DbUpdateException ex) when (ex.IsOverlap())
             {
                 _db.ChangeTracker.Clear();
-                // TODO: notificar al admin que tiene que devolver la plata
+
+                var user = await _db.AppUsers.Select(u => new { u.Id, u.Email, u.Name }).Where(u => u.Id == reservation.AppUserId).FirstOrDefaultAsync();
+                await _mailService.SendMail($"Se efectuo un pago en la reserva {reservation.Id} del usuario con el correo {user.Email}, pero la reserva no se pudo hacer porque justo al momento de pagar, otro usuario la reservo. Debe reembolzar al usuario con el monto de {payment.Amount}",
+                                    "Reembolzo al usuario", Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("ADMIN_MAIL environment variable is not set."), "Administrador");
+
                 return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas. El administrador lo estara reembolsando en breve.");
             }
 

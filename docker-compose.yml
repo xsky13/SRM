@@ -16,6 +16,7 @@ services:
       - Jwt__Key=${SECRET_KEY}
       - ConnectionStrings__DatabaseConnectionString=Host=postgres;username=${POSTGRES_USER};password=${POSTGRES_PASSWORD};database=${POSTGRES_DB};
       - GMAIL_PASSWORD=${GMAIL_PASSWORD}
+      - ADMIN_MAIL=${ADMIN_MAIL}
     depends_on:
       postgres:
         condition: service_healthy
