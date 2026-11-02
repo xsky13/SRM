@@ -67,7 +67,6 @@ namespace SRM.Api.Controllers
                     xRequestId: Request.Headers["x-request-id"],
                     dataId: Request.Query["data.id"],
                     secret: Environment.GetEnvironmentVariable("MP_KEY") ?? throw new InvalidOperationException("MP_KEY environment variable is not set."));
-                return Ok();
             }
             catch (InvalidWebhookSignatureException)
             {
