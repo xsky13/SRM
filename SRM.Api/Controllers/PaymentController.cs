@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using MercadoPago.Error;
+using MercadoPago.Webhook;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
@@ -57,6 +60,20 @@ namespace SRM.Api.Controllers
         public async Task<ActionResult<string>> Webhook([FromBody] PaymentWebhookRequest request)
         {
             /* TODO: VALIDAR FIRMA DE MERCADOPAGO*/
+            try
+            {
+                WebhookSignatureValidator.Validate(
+                    xSignature: Request.Headers["x-signature"],
+                    xRequestId: Request.Headers["x-request-id"],
+                    dataId: Request.Query["data.id"],
+                    secret: Environment.GetEnvironmentVariable("MP_KEY") ?? throw new InvalidOperationException("MP_KEY environment variable is not set."));
+                return Ok();
+            }
+            catch (InvalidWebhookSignatureException)
+            {
+                return Unauthorized();
+            }
+
             await paymentService.CardPaymentWebhook(request);
             return Ok();
         }

@@ -313,7 +313,6 @@ namespace SRM.Api.Services
             if (reservation.State == ReservationState.Cancelled || reservation.State == ReservationState.PaymentPending)
                 return Result<Reservation>.Fail("Esta reserva no se puede modificar. Hay un pago pendiente o esta cancelada.");
 
-            // TODO: validar?
             // la reserva solo se puede modificar hasta 24 horas antes de que entre?
             var now = DateTime.UtcNow;
             var timePassed = reservation.CheckInDate - now;

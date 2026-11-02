@@ -101,7 +101,12 @@ namespace SRM.Api.Services
                 if (newStatus == PaymentStatus.Approved)
                 {
                     var user = await _db.AppUsers.Select(u => new { u.Id, u.Email, u.Name }).Where(u => u.Id == reservation.AppUserId).FirstOrDefaultAsync();
-                    // TODO: llamar servicio de ticket
+                    if (user == null)
+                    {
+                        logger.LogWarning("Usuario con el id no existe: {UserId}", reservation.AppUserId);
+                        return;
+                    }
+
                     await _mailService.SendMail($"El pago para su reserva desde {reservation.CheckInDate.Date} hasta {reservation.CheckOutDate.Date} fue aprobado",
                           "Pago aprobado", user.Email, user.Name ?? "Reservador");
 
@@ -335,7 +340,9 @@ namespace SRM.Api.Services
                 _db.ChangeTracker.Clear();
 
                 var user = await _db.AppUsers.Select(u => new { u.Id, u.Email, u.Name }).Where(u => u.Id == reservation.AppUserId).FirstOrDefaultAsync();
-                await _mailService.SendMail($"Se efectuo un pago en la reserva {reservation.Id} del usuario con el correo {user.Email}, pero la reserva no se pudo hacer porque justo al momento de pagar, otro usuario la reservo. Debe reembolzar al usuario con el monto de {payment.Amount}",
+                /*TODO: VALIDATE?*/
+                if (user != null)
+                    await _mailService.SendMail($"Se efectuo un pago en la reserva {reservation.Id} del usuario con el correo {user.Email}, pero la reserva no se pudo hacer porque justo al momento de pagar, otro usuario la reservo. Debe reembolzar al usuario con el monto de {payment.Amount}",
                                     "Reembolzo al usuario", Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("ADMIN_MAIL environment variable is not set."), "Administrador");
 
                 return Result<PaymentWithUserEmailDto>.Fail("Ya hay una reserva con estas fechas. El administrador lo estara reembolsando en breve.");
