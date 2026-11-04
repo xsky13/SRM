@@ -118,5 +118,57 @@ namespace SRM.Api.Services
             return Result<List<UserSearchDto>>.Ok(users);
         }
 
-    }
+            public async Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request)
+            {
+                var user = await _db.AppUsers.FindAsync(userId);
+                if (user == null) return Result<UserListingDto>.Fail("El usuario no existe");
+
+                if (string.IsNullOrWhiteSpace(request.FirstName))
+                    return Result<UserListingDto>.Fail("El nombre es obligatorio.");
+
+                if (request.FirstName.Length > 50)
+                    return Result<UserListingDto>.Fail("El nombre no puede excederse de 50.");
+
+                if (string.IsNullOrWhiteSpace(request.LastName))
+                    return Result<UserListingDto>.Fail("El apellido es obligatorio.");
+
+                if (request.LastName.Length > 50)
+                    return Result<UserListingDto>.Fail("El nombre no puede excederse de 50.");
+
+                if (string.IsNullOrWhiteSpace(request.Telefono))
+                    return Result<UserListingDto>.Fail("El teléfono es obligatorio.");
+
+                if (request.Telefono.Length > 20)
+                    return Result<UserListingDto>.Fail("El teléfono no puede superar los 20 caracteres.");
+
+                if (!Regex.IsMatch(request.Telefono, @"^\+?[0-9\s\-()]{7,20}$"))
+                    return Result<UserListingDto>.Fail("El teléfono no tiene un formato válido.");
+
+                if (string.IsNullOrWhiteSpace(request.Email))
+                    return Result<UserListingDto>.Fail("El email es obligatorio.");
+
+                if (request.Email.Length > 254)
+                    return Result<UserListingDto>.Fail("El email no puede superar los 254 caracteres.");
+
+                if (!System.Net.Mail.MailAddress.TryCreate(request.Email, out var emailAddress) ||
+                    emailAddress.Address != request.Email)
+                    return Result<UserListingDto>.Fail("El email no tiene un formato válido.");
+
+                var userWithEmail = await _db.AppUsers
+                    .Where(u => u.Id != userId && u.Email == request.Email)
+                    .AnyAsync();
+
+                if (userWithEmail)
+                    return Result<UserListingDto>.Fail("Ya hay un usuario con este email.");
+
+                user.Name = request.FirstName;
+                user.LastName = request.LastName;
+                user.Email = request.Email;
+                user.Telefono = request.Telefono;
+
+                await _db.SaveChangesAsync();
+
+                return Result<UserListingDto>.Ok(user.ToListingDto());
+            }
+        }
 }

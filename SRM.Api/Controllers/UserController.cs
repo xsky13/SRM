@@ -83,6 +83,15 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [HttpPut]
+        public async Task<ActionResult<UserListingDto>> UpdateUser([FromBody] UpdateUserRequestDto request)
+        {
+            var userId = User.GetUserId();
+            var response = await _userService.UpdateUser(userId.Value, request);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
         [HttpPost("logout")]
         public async Task<ActionResult> Logout()
         {
