@@ -155,7 +155,7 @@ namespace SRM.Api.Services
                     return Result<UserListingDto>.Fail("El email no tiene un formato válido.");
 
                 var userWithEmail = await _db.AppUsers
-                    .Where(u => u.Id != userId && u.Email == request.Email)
+                    .Where(u => u.Email == request.Email && u.Id != user.Id && u.Usertype != UserType.Guest)
                     .AnyAsync();
 
                 if (userWithEmail)
