@@ -2,9 +2,6 @@
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Entities;
 using SRM.Api.Utils;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace SRM.Api.Services.Interfaces
 {
