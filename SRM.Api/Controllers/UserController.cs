@@ -92,6 +92,15 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [HttpDelete]
+        public async Task<ActionResult> DeleteUser()
+        {
+            var userId = User.GetUserId();
+            await _userService.DeleteUser(userId.Value);
+            return Ok(new { Success = true });
+        }
+
+        [Authorize]
         [HttpPost("logout")]
         public async Task<ActionResult> Logout()
         {
