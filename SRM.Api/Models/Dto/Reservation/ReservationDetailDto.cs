@@ -1,5 +1,6 @@
 ﻿using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Payment;
+using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Enums;
 
 namespace SRM.Api.Models.Dto.Reservation
@@ -14,8 +15,9 @@ namespace SRM.Api.Models.Dto.Reservation
         public DateTime UpdatedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public Guid AppUserId { get; set; }
+        public UserListingDto? AppUser { get; set; }
         public List<PaymentDto> Payments { get; set; }
-        public ApartmentListingDto Apartment { get; set; }
+        public ApartmentListingDto? Apartment { get; set; }
         public decimal FullCost { get; set; }
     }
 }

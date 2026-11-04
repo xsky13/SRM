@@ -10,7 +10,7 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid apartmentId);
         public Task<Result<ReservationDetailDto>> GetReservationById(Guid id, Guid userId);
         public Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId);
-        public Task<Result<List<ReservationListingDto>>> GetAllForAdmin();
+        public Task<Result<List<ReservationDetailDto>>> GetAllForAdmin();
 
         public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null);
         public Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);

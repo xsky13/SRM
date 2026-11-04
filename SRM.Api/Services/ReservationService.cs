@@ -111,23 +111,17 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<Result<List<ReservationListingDto>>> GetAllForAdmin()
+        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin()
         {
             var reservations = await _db.Reservations
+                .Include(r => r.AppUser)
+                .Include(r => r.Apartment)
                 .AsNoTracking()
                 .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new ReservationListingDto
-                {
-                    Id = r.Id,
-                    CheckInDate = r.CheckInDate,
-                    CheckOutDate = r.CheckOutDate,
-                    ApartmentId = r.ApartmentId,
-                    ApartmentName = r.Apartment.Name,
-                    ReservationState = r.State
-                })
+                .Select(r => r.ToReservationDetailDto())
                 .ToListAsync();
 
-            return Result<List<ReservationListingDto>>.Ok(reservations);
+            return Result<List<ReservationDetailDto>>.Ok(reservations);
         }
 
         public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null)

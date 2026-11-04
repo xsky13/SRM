@@ -21,7 +21,7 @@ namespace SRM.Api.Models.Entities
         public Guid AppUserId { get; set; }
         public AppUser AppUser { get; set; } = null!;
 
-        public List<Payment> Payments { get; set; }
+        public List<Payment> Payments { get; set; } = [];
 
         public ReservationDetailDto ToReservationDetailDto()
         {
@@ -35,7 +35,9 @@ namespace SRM.Api.Models.Entities
                 UpdatedAt = UpdatedAt,
                 CreatedAt = CreatedAt,
                 AppUserId = AppUserId,
-                Payments = Payments.Select(p => p.ToDto()).ToList()
+                AppUser = AppUser?.ToListingDto(),
+                Apartment = Apartment?.ToListingDto(),
+                Payments = Payments?.Select(p => p.ToDto()).ToList() ?? []
             };
         }
     }

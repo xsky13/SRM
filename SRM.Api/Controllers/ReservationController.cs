@@ -103,7 +103,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<ActionResult<List<ReservationListingDto>>> GetAllReservationsForAdmin()
+        public async Task<ActionResult<List<ReservationDetailDto>>> GetAllReservationsForAdmin()
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();

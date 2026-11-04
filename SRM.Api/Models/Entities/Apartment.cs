@@ -17,6 +17,17 @@ namespace SRM.Api.Models.Entities
         public List<Image> Images { get; set; } = [];
         public List<Reservation> Reservations { get; set; } = [];
 
+        public ApartmentListingDto ToListingDto()
+        {
+            return new ApartmentListingDto(
+                Id,
+                Name,
+                CoverImgUrl,
+                Location,
+                Price
+            );
+        }
+
         public ApartmentDetailsDto ToDetailsDto()
         {
             return new ApartmentDetailsDto(
