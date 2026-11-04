@@ -116,6 +116,7 @@ namespace SRM.Api.Services
             var reservations = await _db.Reservations
                 .Include(r => r.AppUser)
                 .Include(r => r.Apartment)
+                .Include(r => r.Payments)
                 .AsNoTracking()
                 .OrderByDescending(r => r.CreatedAt)
                 .Select(r => r.ToReservationDetailDto())
