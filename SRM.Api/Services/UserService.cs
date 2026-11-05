@@ -171,5 +171,15 @@ namespace SRM.Api.Services
 
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
+
+        public async Task<List<UserListingDto>> ListUsers()
+        {
+            var users = await _db.AppUsers
+                .AsNoTracking()
+                .Select(u => u.ToListingDto())
+                .ToListAsync();
+
+            return users;
+        }
     }
 }

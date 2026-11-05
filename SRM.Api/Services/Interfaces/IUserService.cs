@@ -13,6 +13,7 @@ namespace SRM.Api.Services.Interfaces
         Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request);
         Task<bool> UserExists(Guid userId);
         Task<Result<UserListingDto>> GetUser(Guid userId);
+        Task<List<UserListingDto>> ListUsers();
         Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, int limit);
         Task DeleteUser(Guid userId);
     }

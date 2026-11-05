@@ -28,6 +28,17 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [HttpGet("list")]
+        public async Task<ActionResult<UserListingDto>> ListUsers()
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _userService.ListUsers();
+            return Ok(response);
+        }
+
+        [Authorize]
         [HttpGet("search")]
         public async Task<ActionResult<List<UserSearchDto>>> SearchUsers(string? query, int limit = 10)
         {
