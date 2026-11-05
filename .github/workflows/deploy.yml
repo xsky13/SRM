@@ -107,3 +107,20 @@ jobs:
           docker compose up -d --build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           docker image prune -f
+  
+  release:
+    needs: deploy
+    if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "v1.0.${{ github.run_number }}" \
+            --generate-notes
