@@ -1,10 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
-using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers

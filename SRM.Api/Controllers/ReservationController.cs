@@ -1,16 +1,12 @@
-﻿using SRM.Api.Models.Dto.Apartment;
-using SRM.Api.Models.Dto.Payment;
+﻿using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using SRM.Api.Utils;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using System.Security.Claims;
+using SRM.Api.Utils.Extensions;
 
 namespace SRM.Api.Controllers
 {

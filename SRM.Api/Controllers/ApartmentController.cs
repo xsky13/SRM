@@ -4,7 +4,7 @@ using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
-using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers

@@ -8,7 +8,7 @@ using SRM.Api.Data;
 using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Entities;
 using SRM.Api.Services.Interfaces;
-using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers

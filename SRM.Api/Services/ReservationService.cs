@@ -1,7 +1,4 @@
-﻿//using MercadoPago.Resource.Payment;
-using MercadoPago.Resource.Payment;
-using MercadoPago.Resource.User;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Payment;

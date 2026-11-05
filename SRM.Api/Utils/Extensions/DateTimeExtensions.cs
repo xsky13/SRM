@@ -1,4 +1,4 @@
-﻿namespace SRM.Api.Utils
+﻿namespace SRM.Api.Utils.Extensions
 {
     public static class DateExtensions
     {
