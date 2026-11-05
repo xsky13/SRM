@@ -87,33 +87,33 @@ jobs:
         run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
   # --- 4. DEPLOY CONTAINER (deploy branch only, self-hosted runner) ---
-deploy:
-  needs: build-and-analyze
-  if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
-  runs-on: self-hosted
-  steps:
-    - name: Checkout Repository
-      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+  deploy:
+    needs: build-and-analyze
+    if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-    - name: Build Docker Image
-      run: |
-        VERSION="1.0.${{ github.run_number }}"
-        docker build \
-          --build-arg VERSION="$VERSION" \
-          -t srm:"$VERSION" \
-          -t srm:latest .
+      - name: Build Docker Image
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          docker build \
+            --build-arg VERSION="$VERSION" \
+            -t srm:"$VERSION" \
+            -t srm:latest .
 
-    - name: Deploy Container
-      env:
-        SITE_URL: ${{ secrets.SITE_URL }}
-        ADMIN_MAIL: ${{ secrets.ADMIN_MAIL }}
-        MP_ACCESS_TOKEN: ${{ secrets.MP_ACCESS_TOKEN }}
-      run: |
-        docker rm -f srm || true
-        docker run -d --name srm --restart unless-stopped \
-          -p 8080:8080 \
-          -e SITE_URL \
-          -e ADMIN_MAIL \
-          -e MP_ACCESS_TOKEN \
-          srm:latest
-        docker image prune -f
+      - name: Deploy Container
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          ADMIN_MAIL: ${{ secrets.ADMIN_MAIL }}
+          MP_ACCESS_TOKEN: ${{ secrets.MP_ACCESS_TOKEN }}
+        run: |
+          docker rm -f srm || true
+          docker run -d --name srm --restart unless-stopped \
+            -p 8080:8080 \
+            -e SITE_URL \
+            -e ADMIN_MAIL \
+            -e MP_ACCESS_TOKEN \
+            srm:latest
+          docker image prune -f
