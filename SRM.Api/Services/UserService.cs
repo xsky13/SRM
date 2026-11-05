@@ -3,9 +3,12 @@ using SRM.Api.Data;
 using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
+using SRM.Api.Models.Pagination;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Text.RegularExpressions;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SRM.Api.Services
 {
@@ -172,12 +175,14 @@ namespace SRM.Api.Services
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
 
-        public async Task<List<UserListingDto>> ListUsers()
+        public async Task<List<UserListingDto>> ListUsers(PaginationParameters filter)
         {
-            var users = await _db.AppUsers
+            var query = _db.AppUsers
                 .AsNoTracking()
-                .Select(u => u.ToListingDto())
-                .ToListAsync();
+                .OrderBy(u => u.Id);
+
+            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            var users = response.Data.Select(u => u.ToListingDto()).ToList();
 
             return users;
         }
