@@ -1,0 +1,87 @@
+name: CI/CD Pipeline - Build, SonarQube & Deploy
+
+on:
+  push:
+    branches: [ deploy, main ]
+  pull_request:
+    branches: [ deploy, main ]
+
+jobs:
+  build-and-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necessary for SonarQube to get proper analysis of history
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x' # Adjust this to your project's target .NET version (e.g., 6.0, 7.0, or 8.0)
+
+      # --- 1. VERSION MANAGEMENT ---
+      - name: Generate Build Version
+        id: version
+        run: |
+          # Generates a semantic version based on date and GitHub run number (e.g., 1.0.42)
+          VERSION="1.0.${{ github.run_number }}"
+          echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Generated version: $VERSION"
+
+      # --- 2. SONARQUBE ANALYSIS ---
+      - name: Set up Java (Required for SonarScanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Install SonarQube Scanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin SonarQube Analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet-sonarscanner begin \
+            /k:"xsky13_SRM" \
+            /o:"xsky13" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+
+      # --- 3. BUILD & TEST ---
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build Project with Version Tag
+        run: dotnet build --configuration Release --no-restore -p:Version=${{ env.BUILD_VERSION }}
+
+      - name: Run Tests with Coverage
+        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: End SonarQube Analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+      # --- 4. DEPLOYMENT STEP ---
+      - name: Publish Artifacts
+        run: dotnet publish --configuration Release --output ./publish -p:Version=${{ env.BUILD_VERSION }}
+
+      - name: Deploy to Server / Environment
+        if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
+        run: |
+          echo "Executing deployment steps for production/staging server..."
+          # Add your deployment commands here (e.g., SSH deployment, FTP, or cloud provider CLI)
+          echo "Successfully deployed version ${{ env.BUILD_VERSION }}"

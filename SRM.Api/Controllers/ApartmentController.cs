@@ -28,6 +28,7 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("ReSharper", "S5693")]
         [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50 MB total request limit
         [RequestSizeLimit(52428800)]
         [HttpPost]
@@ -75,6 +76,7 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("ReSharper", "S5693")]
         [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50 MB total request limit
         [RequestSizeLimit(52428800)]
         [HttpPost("{id}/images")]
