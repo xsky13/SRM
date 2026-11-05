@@ -95,27 +95,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Build Docker Image
-        run: |
-          $version = "1.0.${{ github.run_number }}"
-          docker build `
-            --build-arg VERSION=$version `
-            -t "srm:$version" `
-            -t srm:latest .
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Deploy Container
+      - name: Create .env file
         env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-          ADMIN_MAIL: ${{ secrets.ADMIN_MAIL }}
-          MP_ACCESS_TOKEN: ${{ secrets.MP_ACCESS_TOKEN }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
-          if (docker ps -aq -f "name=^srm$") { docker rm -f srm }
-          docker run -d --name srm --restart unless-stopped `
-            -p 8080:8080 `
-            -e SITE_URL `
-            -e ADMIN_MAIL `
-            -e MP_ACCESS_TOKEN `
-            srm:latest
+          # WriteAllText avoids the BOM that Set-Content adds in Windows PowerShell
+          [System.IO.File]::WriteAllText((Join-Path $PWD ".env"), $env:ENV_FILE)
+
+      - name: Build and Start Containers
+        run: |
+          docker compose up -d --build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           docker image prune -f
