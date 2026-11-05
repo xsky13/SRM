@@ -179,6 +179,15 @@ namespace SRM.Api.Services
             if (dto.Images == null || dto.Images.Count == 0)
                 return Result<List<ImageDto>>.Fail("Debe proporcionar al menos una imagen.", 400);
 
+            // image validations
+            if (dto.Images == null || dto.Images.Count == 0)
+                return Result<List<ImageDto>>.Fail("Debe proporcionar al menos una imagen.", 400);
+
+            if (dto.Images.Count > 10) // Example limit: max 10 images at once
+                return Result<List<ImageDto>>.Fail("No puede subir más de 10 imágenes a la vez.", 400);
+
+            const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
+
             var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 ".jpg",
@@ -191,6 +200,9 @@ namespace SRM.Api.Services
             {
                 if (imageFile == null || imageFile.Length == 0)
                     return Result<List<ImageDto>>.Fail("Las imágenes proporcionadas no son válidas o están vacías.", 400);
+
+                if (imageFile.Length > MaxFileSizeBytes)
+                    return Result<List<ImageDto>>.Fail($"El archivo {imageFile.FileName} supera el tamaño máximo permitido (5 MB).", 400);
 
                 var extension = Path.GetExtension(imageFile.FileName ?? string.Empty);
                 if (!allowedExtensions.Contains(extension))
@@ -221,7 +233,8 @@ namespace SRM.Api.Services
                     var image = new Image
                     {
                         Id = Guid.NewGuid(),
-                        Url = $"/images/{fileName}", // Aquí generamos el string que guardará en la BD
+                        Url = $"{Environment.GetEnvironmentVariable("SITE_URL") ?? throw new InvalidOperationException("SITE_URL not set")}/images/{fileName}",
+                        //Url = $"/images/{fileName}", // Aquí generamos el string que guardará en la BD
                         ApartmentId = id
                     };
 

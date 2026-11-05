@@ -28,6 +28,8 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50 MB total request limit
+        [RequestSizeLimit(52428800)]
         [HttpPost]
         public async Task<ActionResult<ApartmentDetailsDto>> CreateApartment([FromForm] CreateApartmentDto request)
         {
@@ -73,6 +75,8 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50 MB total request limit
+        [RequestSizeLimit(52428800)]
         [HttpPost("{id}/images")]
         public async Task<ActionResult<List<SRM.Api.Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromForm] AddImagesDto request)
         {
