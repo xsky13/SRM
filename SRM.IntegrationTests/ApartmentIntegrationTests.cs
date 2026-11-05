@@ -1,7 +1,5 @@
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using SRM.Api.Data;
@@ -9,6 +7,9 @@ using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace SRM.IntegrationTests;
 
@@ -21,6 +22,26 @@ public class ApartmentIntegrationTests : IClassFixture<CustomWebApplicationFacto
         _factory = factory;
     }
 
+    public static IFormFile CreateMockImageFile()
+    {
+        // Minimal valid 1x1 pixel transparent GIF byte array
+        byte[] gifBytes = {
+        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
+        0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x21,
+        0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00,
+        0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+        0x01, 0x00, 0x3b
+    };
+
+        var stream = new MemoryStream(gifBytes);
+        return new FormFile(stream, 0, stream.Length, "image", "test.gif")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "image/gif"
+        };
+    }
+
+
     private static CreateApartmentDto BuildApartmentPayload()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
@@ -30,7 +51,7 @@ public class ApartmentIntegrationTests : IClassFixture<CustomWebApplicationFacto
             Description = $"Descripcion valida para el departamento {suffix}. Debe tener al menos 10 caracteres para pasar la validacion del backend.",
             Price = 2500m,
             Location = $"Calle {suffix} 123",
-            CoverImgUrl = "https://example.com/images/cover.jpg",
+            Images = [CreateMockImageFile()],
             Latitude = -34.6037,
             Longitude = -58.3816
         };
