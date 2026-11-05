@@ -13,6 +13,9 @@ using SRM.Api.Services.Interfaces;
 using System.Text;
 using System.Text.Json;
 
+DotNetEnv.Env.Load(); // for tests
+
+
 MercadoPagoConfig.AccessToken = Environment.GetEnvironmentVariable("MP_ACCESS_TOKEN") ?? throw new InvalidOperationException("mp token not set");
 
 var builder = WebApplication.CreateBuilder(args);
