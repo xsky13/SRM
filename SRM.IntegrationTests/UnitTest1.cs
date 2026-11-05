@@ -1,4 +1,4 @@
-﻿namespace SRM.IntegrationTests;
+namespace SRM.IntegrationTests;
 
 public class UnitTest1
 {

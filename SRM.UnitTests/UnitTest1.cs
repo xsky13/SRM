@@ -1,4 +1,4 @@
-﻿namespace SRM.UnitTests;
+namespace SRM.UnitTests;
 
 public class UnitTest1
 {

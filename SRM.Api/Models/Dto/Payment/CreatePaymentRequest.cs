@@ -1,0 +1,35 @@
+﻿using SRM.Api.Utils;
+using System.Text.Json.Serialization;
+
+namespace SRM.Api.Models.Dto.Payment
+{
+
+    public class Identification
+    {
+        public string Type { get; set; }
+        public string Number { get; set; }
+    }
+    public class Payer
+    {
+        public string Email { get; set; }
+        public Identification Identification { get; set; }
+    }
+
+    public class MpPaymentObject
+    {
+        public decimal TransactionAmount { get; set; }
+        public string Token { get; set; }
+        public int Installments { get; set; }
+        public string Payment_Method_Id { get; set; }
+        public Payer Payer { get; set; }
+        public Guid? ReservationId { get; set; } = null;
+    }
+
+    public class CreatePaymentRequest : MpPaymentObject
+    {
+        [JsonConverter(typeof(UtcDateJsonConverter))]
+        public DateTime CheckInDate { get; set; }
+        [JsonConverter(typeof(UtcDateJsonConverter))]
+        public DateTime CheckOutDate { get; set; }
+    }
+}
