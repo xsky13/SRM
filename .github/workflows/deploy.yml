@@ -85,7 +85,7 @@ jobs:
         run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
   # --- 4. DEPLOY CONTAINER (deploy branch only, self-hosted runner) ---
-    deploy:
+  deploy:
     needs: build-and-analyze
     if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
     runs-on: self-hosted
