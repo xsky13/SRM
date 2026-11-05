@@ -51,7 +51,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SITE_URL: ${{ secretes.SITE_URL }}
+          SITE_URL: ${{ secrets.SITE_URL }}
           ADMIN_MAIL: ${{ secrets.ADMIN_MAIL }}
           MP_ACCESS_TOKEN: ${{ secrets.MP_ACCESS_TOKEN }}
         run: |
