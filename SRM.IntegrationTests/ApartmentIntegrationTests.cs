@@ -57,6 +57,42 @@ public class ApartmentIntegrationTests : IClassFixture<CustomWebApplicationFacto
         };
     }
 
+    private static MultipartFormDataContent BuildApartmentMultipartPayload()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var content = new MultipartFormDataContent();
+
+        content.Add(new StringContent($"Depto {suffix}"), "Name");
+        content.Add(new StringContent($"Descripcion valida para el departamento {suffix}. Debe tener al menos 10 caracteres para pasar la validacion del backend."), "Description");
+        content.Add(new StringContent("2500"), "Price");
+        content.Add(new StringContent($"Calle {suffix} 123"), "Location");
+        content.Add(new StringContent("-34.6037"), "Latitude");
+        content.Add(new StringContent("-58.3816"), "Longitude");
+
+        // Valid mock JPEG byte array
+        byte[] jpegBytes = { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00 };
+        var fileContent = new ByteArrayContent(jpegBytes);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        content.Add(fileContent, "Images", "test.jpg");
+
+        return content;
+    }
+
+    private async Task<Guid> CreateApartmentAsync(HttpClient client)
+    {
+        using var payload = BuildApartmentMultipartPayload();
+        var response = await client.PostAsync("/api/Apartment", payload);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().BeOneOf(new[] { HttpStatusCode.OK, HttpStatusCode.Created }, "Error body: {0}", responseBody);
+
+        var apartment = await response.Content.ReadFromJsonAsync<Apartment>();
+        apartment.Should().NotBeNull();
+        apartment!.Id.Should().NotBe(Guid.Empty);
+
+        return apartment.Id;
+    }
+
     private async Task<HttpClient> CreateAdminClientAsync()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -100,26 +136,27 @@ public class ApartmentIntegrationTests : IClassFixture<CustomWebApplicationFacto
         return client;
     }
 
-    private async Task<Guid> CreateApartmentAsync(HttpClient client)
-    {
-        var payload = BuildApartmentPayload();
-        var response = await client.PostAsJsonAsync("/api/Apartment", payload);
-        var responseBody = await response.Content.ReadAsStringAsync();
+    //private async Task<Guid> CreateApartmentAsync(HttpClient client)
+    //{
+    //    var payload = BuildApartmentPayload();
+    //    var response = await client.PostAsJsonAsync("/api/Apartment", payload);
+    //    var responseBody = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().BeOneOf(new[] { HttpStatusCode.OK, HttpStatusCode.Created }, "Error body: {0}", responseBody);
+    //    response.StatusCode.Should().BeOneOf(new[] { HttpStatusCode.OK, HttpStatusCode.Created }, "Error body: {0}", responseBody);
 
-        var apartment = await response.Content.ReadFromJsonAsync<Apartment>();
-        apartment.Should().NotBeNull();
-        apartment!.Id.Should().NotBe(Guid.Empty);
+    //    var apartment = await response.Content.ReadFromJsonAsync<Apartment>();
+    //    apartment.Should().NotBeNull();
+    //    apartment!.Id.Should().NotBe(Guid.Empty);
 
-        return apartment.Id;
-    }
+    //    return apartment.Id;
+    //}
 
     [Fact]
     public async Task CreateApartment_AsAdmin_ReturnsSuccess()
     {
         using var client = await CreateAdminClientAsync();
-        var response = await client.PostAsJsonAsync("/api/Apartment", BuildApartmentPayload());
+        using var payload = BuildApartmentMultipartPayload();
+        var response = await client.PostAsync("/api/Apartment", payload);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().BeOneOf(new[] { HttpStatusCode.OK, HttpStatusCode.Created }, "Error body: {0}", responseBody);
@@ -134,7 +171,8 @@ public class ApartmentIntegrationTests : IClassFixture<CustomWebApplicationFacto
             BaseAddress = new Uri("https://localhost")
         });
 
-        var response = await client.PostAsJsonAsync("/api/Apartment", BuildApartmentPayload());
+        using var payload = BuildApartmentMultipartPayload();
+        var response = await client.PostAsync("/api/Apartment", payload);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, "Error body: {0}", responseBody);

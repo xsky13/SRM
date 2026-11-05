@@ -2,9 +2,14 @@ name: CI/CD Pipeline - Build, SonarQube & Deploy
 
 on:
   push:
-    branches: [ deploy, main ]
+    branches: [deploy, main]
   pull_request:
-    branches: [ deploy, main ]
+    branches: [deploy, main]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
 
 permissions:
   contents: read
@@ -24,7 +29,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: "10.0.x"
 
       - name: Generate Build Version
         id: version
@@ -36,8 +41,8 @@ jobs:
       - name: Set up Java (Required for SonarScanner)
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Cache SonarQube packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -68,6 +73,10 @@ jobs:
         run: dotnet build --configuration Release --no-restore -p:Version=${{ env.BUILD_VERSION }}
 
       - name: Run Tests with Coverage
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          ADMIN_MAIL: ${{ secrets.ADMIN_MAIL }}
+          MP_ACCESS_TOKEN: ${{ secrets.MP_ACCESS_TOKEN }}
         run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarQube Analysis
@@ -76,13 +85,34 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
-      # --- 4. DEPLOYMENT STEP ---
-      - name: Publish Artifacts
-        run: dotnet publish --configuration Release --output ./publish -p:Version=${{ env.BUILD_VERSION }}
+  # --- 4. DEPLOY CONTAINER (deploy branch only, self-hosted runner) ---
+  deploy:
+    needs: build-and-analyze
+    if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Deploy to Server / Environment
-        if: github.ref == 'refs/heads/deploy' && github.event_name == 'push'
+      - name: Build Docker Image
         run: |
-          echo "Executing deployment steps for production/staging server..."
-          # Add your deployment commands here (e.g., SSH deployment, FTP, or cloud provider CLI)
-          echo "Successfully deployed version ${{ env.BUILD_VERSION }}"
+          VERSION="1.0.${{ github.run_number }}"
+          docker build \
+            --build-arg VERSION="$VERSION" \
+            -t srm:"$VERSION" \
+            -t srm:latest .
+
+      - name: Deploy Container
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          ADMIN_MAIL: ${{ secrets.ADMIN_MAIL }}
+          MP_ACCESS_TOKEN: ${{ secrets.MP_ACCESS_TOKEN }}
+        run: |
+          docker rm -f srm || true
+          docker run -d --name srm --restart unless-stopped \
+            -p 8080:8080 \
+            -e SITE_URL \
+            -e ADMIN_MAIL \
+            -e MP_ACCESS_TOKEN \
+            srm:latest
+          docker image prune -f
