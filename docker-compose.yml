@@ -14,7 +14,7 @@ services:
       - ApiSettings__Issuer=${ISSUER}
       - ApiSettings__Audience=${AUDIENCE}
       - Jwt__Key=${SECRET_KEY}
-      - ConnectionStrings__DatabaseConnectionString=Host=postgres;username=${POSTGRES_USER};password=${POSTGRES_PASSWORD};database=${POSTGRES_DB};
+      - ConnectionStrings__DatabaseConnectionString=Host=${POSTGRES_HOST};username=${POSTGRES_USER};password=${POSTGRES_PASSWORD};database=${POSTGRES_DB};
       - GMAIL_PASSWORD=${GMAIL_PASSWORD}
       - ADMIN_MAIL=${ADMIN_MAIL}
       - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
