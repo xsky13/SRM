@@ -18,6 +18,7 @@ services:
       - GMAIL_PASSWORD=${GMAIL_PASSWORD}
       - ADMIN_MAIL=${ADMIN_MAIL}
       - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
+      - MP_KEY=${MP_KEY}
       - SITE_URL=${SITE_URL}
     depends_on:
       postgres:
