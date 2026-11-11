@@ -11,6 +11,17 @@ namespace SRM.IntegrationTests;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    static CustomWebApplicationFactory()
+    {
+        Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "SeedData", "Images"));
+        Environment.SetEnvironmentVariable("MP_TOKEN", "TEST_MOCK_TOKEN");
+        Environment.SetEnvironmentVariable("MP_ACCESS_TOKEN", "TEST_MOCK_TOKEN");
+        Environment.SetEnvironmentVariable("MP_KEY", "TEST_MOCK_KEY");
+        Environment.SetEnvironmentVariable("SITE_URL", "http://localhost:3000");
+        Environment.SetEnvironmentVariable("ADMIN_MAIL", "admin@test.local");
+        Environment.SetEnvironmentVariable("GMAIL_PASSWORD", "TEST_MOCK_PASSWORD");
+    }
+
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder("postgres:15-alpine")
         .WithDatabase("srm")
         .WithUsername("postgres")
@@ -19,6 +30,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        var contentRootPath = builder.GetSetting(WebHostDefaults.ContentRootKey) ?? Directory.GetCurrentDirectory();
+        Directory.CreateDirectory(Path.Combine(contentRootPath, "SeedData", "Images"));
+
         builder.UseEnvironment("Development");
 
         builder.ConfigureAppConfiguration((_, configBuilder) =>
@@ -26,6 +40,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:DatabaseConnectionString"] = _dbContainer.GetConnectionString(),
+                ["ConnectionStrings:DefaultConnection"] = _dbContainer.GetConnectionString(),
                 ["Jwt:Key"] = "SuperSecretKeyForIntegrationTests1234567890",
                 ["ApiSettings:Issuer"] = "SRM-Test-Issuer",
                 ["ApiSettings:Audience"] = "SRM-Test-Audience"

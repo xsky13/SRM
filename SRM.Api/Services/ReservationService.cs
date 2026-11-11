@@ -13,6 +13,11 @@ namespace SRM.Api.Services
 {
     public class ReservationService(AppDbContext _db, IBankService _bankService, IMailService _mailService) : IReservationService
     {
+        private static int Nights(DateTime checkInDate, DateTime checkOutDate)
+        {
+            return Math.Max((checkOutDate.Date - checkInDate.Date).Days + 1, 1);
+        }
+
         public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId, Guid userId)
         {
             ReservationDetailDto returnedReservation;
@@ -51,8 +56,7 @@ namespace SRM.Api.Services
             if (apartmentCost == 0) // no se encontro el departamento
                 return Result<ReservationDetailDto>.Fail("El departamento no existe.");
 
-            var diff = (reservation.CheckOutDate.Date - reservation.CheckInDate.Date).Days + 1;
-            var nights = Math.Max(diff, 1);
+            var nights = Nights(reservation.CheckInDate, reservation.CheckOutDate);
             var fullCost = nights * apartmentCost;
 
             returnedReservation.FullCost = fullCost;
@@ -372,7 +376,7 @@ namespace SRM.Api.Services
             if (apartmentCost == 0) // no se encontro el departamento
                 return Result<ReservationDetailDto>.Fail("El departamento para los pagos no existe.");
 
-            var nights = (request.NewEndDate.Date - request.NewStartDate.Date).Days + 1;
+            var nights = Nights(request.NewStartDate, request.NewEndDate);
             var fullCost = nights * apartmentCost;
             var amount = fullCost - totalPayed; // diferencia entre lo pagado y el nuevo total
 

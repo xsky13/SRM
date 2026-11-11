@@ -1,14 +1,13 @@
 using FluentAssertions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using SRM.Api.Data;
-using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace SRM.IntegrationTests;
@@ -22,38 +21,29 @@ public class ReservationIntegrationTests : IClassFixture<CustomWebApplicationFac
         _factory = factory;
     }
 
-    public static IFormFile CreateMockImageFile()
-    {
-        // Minimal valid 1x1 pixel transparent GIF byte array
-        byte[] gifBytes = {
-        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
-        0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x21,
-        0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00,
-        0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
-        0x01, 0x00, 0x3b
-    };
-
-        var stream = new MemoryStream(gifBytes);
-        return new FormFile(stream, 0, stream.Length, "image", "test.gif")
-        {
-            Headers = new HeaderDictionary(),
-            ContentType = "image/gif"
-        };
-    }
-
-    private static CreateApartmentDto BuildApartmentPayload()
+    private static MultipartFormDataContent BuildApartmentPayload()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
-        return new CreateApartmentDto
+        var content = new MultipartFormDataContent();
+        content.Add(new StringContent($"Depto {suffix}"), "Name");
+        content.Add(new StringContent($"Descripcion valida para el departamento {suffix}."), "Description");
+        content.Add(new StringContent("2500"), "Price");
+        content.Add(new StringContent($"Calle {suffix} 123"), "Location");
+        content.Add(new StringContent("-34.6037"), "Latitude");
+        content.Add(new StringContent("-58.3816"), "Longitude");
+
+        byte[] gifBytes =
         {
-            Name = $"Depto {suffix}",
-            Description = $"Descripcion valida para el departamento {suffix}. Debe tener al menos 10 caracteres para pasar la validacion del backend.",
-            Price = 2500m,
-            Location = $"Calle {suffix} 123",
-            Images = [CreateMockImageFile()],
-            Latitude = -34.6037,
-            Longitude = -58.3816
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
+            0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0x21,
+            0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00,
+            0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44,
+            0x01, 0x00, 0x3b
         };
+        var imageContent = new ByteArrayContent(gifBytes);
+        imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/gif");
+        content.Add(imageContent, "Images", "test.jpg");
+        return content;
     }
 
     private async Task<HttpClient> CreateUserClientAsync()
@@ -138,7 +128,8 @@ public class ReservationIntegrationTests : IClassFixture<CustomWebApplicationFac
 
     private async Task<Guid> CreateApartmentAsync(HttpClient adminClient)
     {
-        var response = await adminClient.PostAsJsonAsync("/api/Apartment", BuildApartmentPayload());
+        using var payload = BuildApartmentPayload();
+        var response = await adminClient.PostAsync("/api/Apartment", payload);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().BeOneOf(new[] { HttpStatusCode.OK, HttpStatusCode.Created }, "Error body: {0}", responseBody);
