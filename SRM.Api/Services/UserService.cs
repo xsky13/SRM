@@ -119,6 +119,53 @@ namespace SRM.Api.Services
             return Result<List<UserSearchDto>>.Ok(users);
         }
 
+        public async Task<Result<List<UserAdminListDto>>> GetUsersForAdminAsync(int limit = 50)
+        {
+            if (limit <= 0)
+                return Result<List<UserAdminListDto>>.Fail("El límite debe ser mayor que cero.");
+
+            var users = await _db.AppUsers
+                .AsNoTracking()
+                .Where(u => u.Usertype != UserType.Guest)
+                .OrderBy(u => u.LastName)
+                .ThenBy(u => u.Name)
+                .Take(limit)
+                .Select(u => new UserAdminListDto
+                {
+                    Id = u.Id,
+                    FirstName = u.Name,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    Telefono = u.Telefono,
+                    Usertype = u.Usertype
+                })
+                .ToListAsync();
+
+            return Result<List<UserAdminListDto>>.Ok(users);
+        }
+
+        public async Task<Result<UserAdminListDto>> GetUserDetailsByIdAsync(Guid userId)
+        {
+            var user = await _db.AppUsers
+                .AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => new UserAdminListDto
+                {
+                    Id = u.Id,
+                    FirstName = u.Name,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    Telefono = u.Telefono,
+                    Usertype = u.Usertype
+                })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+                return Result<UserAdminListDto>.Fail("Usuario no encontrado", 404);
+
+            return Result<UserAdminListDto>.Ok(user);
+        }
+
         public async Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request)
         {
             var user = await _db.AppUsers.FindAsync(userId);

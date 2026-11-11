@@ -14,6 +14,28 @@ namespace SRM.Api.Controllers
     public class UserController(IAuthService _authService, IUserService _userService) : ControllerBase
     {
         [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<List<UserAdminListDto>>> GetUsersForAdmin(int limit = 50)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _userService.GetUsersForAdminAsync(limit);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<UserAdminListDto>> GetUserDetailsById(Guid id)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _userService.GetUserDetailsByIdAsync(id);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
         [HttpGet("me")]
         public async Task<ActionResult<UserListingDto>> GetUser()
         {
