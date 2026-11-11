@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using SRM.Api;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Entities;
@@ -246,11 +247,12 @@ public class PaymentWebhookTests
     private static PaymentService CreateService(AppDbContext db, IBankService bankService)
     {
         var reservationService = new Mock<IReservationService>();
+        var mailService = new Mock<IMailService>();
         reservationService
             .Setup(x => x.DatesAreInvalid(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Guid>(), It.IsAny<Guid?>()))
             .ReturnsAsync(false);
 
-        return new PaymentService(db, reservationService.Object, bankService, Mock.Of<IUserService>(), NullLogger<GlobalExceptionHandler>.Instance);
+        return new PaymentService(db, reservationService.Object, bankService, Mock.Of<IUserService>(), NullLogger<GlobalExceptionHandler>.Instance, mailService.Object);
     }
 
     private static AppUser CreateUser()

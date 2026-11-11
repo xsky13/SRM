@@ -13,7 +13,7 @@ using SRM.Api.Services.Interfaces;
 using System.Text;
 using System.Text.Json;
 
-MercadoPagoConfig.AccessToken = "TEST-8757392314054936-090112-0d1fdd0e5bd154c70da6c8ef04f75e85-1623332253";
+MercadoPagoConfig.AccessToken = Environment.GetEnvironmentVariable("MP_ACCESS_TOKEN") ?? throw new InvalidOperationException("mp token not set");
 
 var builder = WebApplication.CreateBuilder(args);
 

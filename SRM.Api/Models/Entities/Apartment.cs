@@ -6,7 +6,7 @@ namespace SRM.Api.Models.Entities
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string CoverImgUrl { get; set; } = "http://localhost:5000/images/shrek_harvey.webp";
+        public string CoverImgUrl { get; set; } = (Environment.GetEnvironmentVariable("SITE_URL") ?? throw new InvalidOperationException("SITE_URL not set")) + "/images/shrek_harvey.webp";
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public string Location { get; set; } = string.Empty;
@@ -16,6 +16,17 @@ namespace SRM.Api.Models.Entities
         public DateTime? DeletedOnUTC { get; set; }
         public List<Image> Images { get; set; } = [];
         public List<Reservation> Reservations { get; set; } = [];
+
+        public ApartmentListingDto ToListingDto()
+        {
+            return new ApartmentListingDto(
+                Id,
+                Name,
+                CoverImgUrl,
+                Location,
+                Price
+            );
+        }
 
         public ApartmentDetailsDto ToDetailsDto()
         {

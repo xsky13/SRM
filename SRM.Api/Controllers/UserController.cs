@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Enums;
+using SRM.Api.Models.Pagination;
 using SRM.Api.Services.Interfaces;
-using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers
@@ -47,6 +47,17 @@ namespace SRM.Api.Controllers
             var response = await _userService.GetUser(parsedUserId);
 
             return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpGet("list")]
+        public async Task<ActionResult<UserListingDto>> ListUsers([FromQuery] PaginationParameters filter)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _userService.ListUsers(filter);
+            return Ok(response);
         }
 
         [Authorize]

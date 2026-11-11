@@ -17,6 +17,8 @@ services:
       - ConnectionStrings__DatabaseConnectionString=Host=postgres;username=${POSTGRES_USER};password=${POSTGRES_PASSWORD};database=${POSTGRES_DB};
       - GMAIL_PASSWORD=${GMAIL_PASSWORD}
       - ADMIN_MAIL=${ADMIN_MAIL}
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN}
+      - SITE_URL=${SITE_URL}
     depends_on:
       postgres:
         condition: service_healthy

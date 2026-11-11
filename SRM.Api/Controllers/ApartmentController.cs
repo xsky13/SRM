@@ -4,7 +4,7 @@ using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
-using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Security.Claims;
 
 namespace SRM.Api.Controllers
@@ -28,6 +28,9 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("ReSharper", "S5693")]
+        [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50 MB total request limit
+        [RequestSizeLimit(52428800)]
         [HttpPost]
         public async Task<ActionResult<ApartmentDetailsDto>> CreateApartment([FromForm] CreateApartmentDto request)
         {
@@ -73,6 +76,9 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("ReSharper", "S5693")]
+        [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50 MB total request limit
+        [RequestSizeLimit(52428800)]
         [HttpPost("{id}/images")]
         public async Task<ActionResult<List<SRM.Api.Models.Dto.Images.ImageDto>>> AddImages(Guid id, [FromForm] AddImagesDto request)
         {

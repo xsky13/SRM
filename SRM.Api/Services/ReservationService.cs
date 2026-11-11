@@ -1,6 +1,4 @@
-﻿//using MercadoPago.Resource.Payment;
-using MercadoPago.Resource.Payment;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Apartment;
 using SRM.Api.Models.Dto.Payment;
@@ -13,7 +11,7 @@ using SRM.Api.Utils;
 
 namespace SRM.Api.Services
 {
-    public class ReservationService(AppDbContext _db, IBankService _bankService) : IReservationService
+    public class ReservationService(AppDbContext _db, IBankService _bankService, IMailService _mailService) : IReservationService
     {
         public async Task<Result<ReservationDetailDto>> GetReservationById(Guid reservationId, Guid userId)
         {
@@ -110,23 +108,18 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<Result<List<ReservationListingDto>>> GetAllForAdmin()
+        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin()
         {
             var reservations = await _db.Reservations
+                .Include(r => r.AppUser)
+                .Include(r => r.Apartment)
+                .Include(r => r.Payments)
                 .AsNoTracking()
                 .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new ReservationListingDto
-                {
-                    Id = r.Id,
-                    CheckInDate = r.CheckInDate,
-                    CheckOutDate = r.CheckOutDate,
-                    ApartmentId = r.ApartmentId,
-                    ApartmentName = r.Apartment.Name,
-                    ReservationState = r.State
-                })
+                .Select(r => r.ToReservationDetailDto())
                 .ToListAsync();
 
-            return Result<List<ReservationListingDto>>.Ok(reservations);
+            return Result<List<ReservationDetailDto>>.Ok(reservations);
         }
 
         public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null)
@@ -299,6 +292,7 @@ namespace SRM.Api.Services
         {
             var reservation = await _db.Reservations
                 .Include(r => r.Apartment)
+                .Include(r => r.AppUser)
                 .FirstOrDefaultAsync(r => r.Id == reservationId);
             if (reservation == null) return Result<Reservation>.Fail("La reserva no existe", 404);
 
@@ -328,15 +322,33 @@ namespace SRM.Api.Services
 
         public async Task<Result<ReservationDetailDto>> EditOwnReservation(EditOwnReservationRequestNoPaymentDto request, Reservation reservation, Guid userId)
         {
+
+            if (reservation.State == ReservationState.ConfirmedPaymentComplete)
+            {
+                var adminMail = Environment.GetEnvironmentVariable("ADMIN_MAIL");
+                var totalPayed = await _db.Payments
+                    .Where(p => p.ReservationId == reservation.Id && p.PaymentStatus == Models.Enums.PaymentStatus.Approved)
+                    .SumAsync(p => p.Amount);
+                var newTotal = ((request.NewEndDate.Date - request.NewStartDate.Date).Days + 1) * reservation.Apartment.Price;
+
+                var owed = totalPayed - newTotal;
+
+                // notificar al administrador y usuario
+                await _mailService.SendMail(
+                    $"El usuario {reservation.AppUser.Email} (id {reservation.AppUser.Id}) acorto su reserva {reservation.Id}, que ya estaba pagada por completo. " +
+                    $"Debe devolverle la diferencia entre lo pagado y el costo de las nuevas fechas. Monto a devolver: ${owed}",
+                    "Devolucion al usuario", adminMail, "Administrador");
+
+                await _mailService.SendMail(
+                    $"Como acortaste una reserva ya pagada por completo, se te va a devolver la diferencia entre lo pagado y el costo de las nuevas fechas. Monto a devolver: ${owed}",
+                    "Devolucion de tu reserva", reservation.AppUser.Email, $"{reservation.AppUser.Name} {reservation.AppUser.LastName}");
+            }
+
+
             reservation.CheckInDate = request.NewStartDate;
             reservation.CheckOutDate = request.NewEndDate;
             reservation.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
-
-            if (reservation.State == ReservationState.ConfirmedPaymentComplete)
-            {
-                // notificar al administrador y usuario
-            }
 
             return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
@@ -347,7 +359,7 @@ namespace SRM.Api.Services
             var totalPayed = await _db.Payments
                 .Where(p => p.ReservationId == reservation.Id && p.PaymentStatus == Models.Enums.PaymentStatus.Approved)
                 .SumAsync(p => p.Amount);
-            
+
 
             /*
              Conseguir nuevo costo total
@@ -410,7 +422,7 @@ namespace SRM.Api.Services
                     return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
             }
         }
-        
+
 
         public async Task<Result<ReservationDetailDto>> CancelReservation(Guid reservationId, Guid userId)
         {
