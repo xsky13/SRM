@@ -15,6 +15,11 @@ namespace SRM.UnitTests;
 
 public class PaymentWebhookTests
 {
+    static PaymentWebhookTests()
+    {
+        Environment.SetEnvironmentVariable("SITE_URL", "http://test.local");
+    }
+
     [Fact]
     public async Task Webhook_ApprovedSignPayment_TransitionsToIncomplete()
     {
