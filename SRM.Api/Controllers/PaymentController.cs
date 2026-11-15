@@ -25,7 +25,7 @@ namespace SRM.Api.Controllers
                 ? parsedUserId
                 : null;
 
-            var result = await paymentService.ProcessFullPayment(request, apartmentId, Guid.NewGuid().ToString(), userId, request.ReservationId); // fix idempotency
+            var result = await paymentService.ProcessFullPayment(request, apartmentId, userId, request.ReservationId); // fix idempotency
             return result.ToActionResult();
         }
 
@@ -39,7 +39,7 @@ namespace SRM.Api.Controllers
             if (!Guid.TryParse(userId, out Guid userGuid)) return Unauthorized();
 
             // fix idempotency
-            var result = await paymentService.ProcessSignPayment(request, apartmentId, Guid.NewGuid().ToString(), userGuid, request.ReservationId);
+            var result = await paymentService.ProcessSignPayment(request, apartmentId, userGuid, request.ReservationId);
             return result.ToActionResult();
         }
 
@@ -52,7 +52,7 @@ namespace SRM.Api.Controllers
 
             if (!Guid.TryParse(userId, out Guid userGuid)) return Unauthorized();
 
-            var result = await paymentService.ProcessRestPayment(request, reservationId, Guid.NewGuid().ToString(), userGuid);
+            var result = await paymentService.ProcessRestPayment(request, reservationId, userGuid);
             return result.ToActionResult();
         }
 

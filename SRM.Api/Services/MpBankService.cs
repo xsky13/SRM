@@ -1,6 +1,7 @@
 ﻿using MercadoPago.Client;
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Payment;
+using Microsoft.EntityFrameworkCore;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Entities;
@@ -14,10 +15,13 @@ namespace SRM.Api.Services
         /*
   * IMPORTANTE: SIEMPRE LLAMAR db.SaveChanges DESPUES DE USAR ESTA FUNCION.
   */
-        public async Task<Result<Payment>> CreatePayment(CreatePaymentRequest request, decimal amount, Guid userId, Guid reservationId, string idempotencyKey, bool isSign)
+        public async Task<Result<Payment>> CreatePayment(CreatePaymentRequest request, decimal amount, Guid userId, Guid reservationId, bool isSign)
         {
+            var attempt = await _db.Payments.CountAsync(p => p.ReservationId == reservationId);
+            var key = $"{reservationId}_{(isSign ? "sign" : "pay")}_{attempt}";
+
             var requestOptions = new RequestOptions();
-            requestOptions.CustomHeaders.Add("x-idempotency-key", idempotencyKey);
+            requestOptions.CustomHeaders.Add("x-idempotency-key", key);
 
             var paymentRequest = new PaymentCreateRequest
             {

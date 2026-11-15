@@ -393,7 +393,7 @@ namespace SRM.Api.Services
                 CheckInDate = request.NewStartDate,
                 CheckOutDate = request.NewEndDate
             };
-            var paymentResult = await _bankService.CreatePayment(paymentRequest, amount, userId, reservation.Id, "", isSign: false); // TODO: resolver idempotency (later)
+            var paymentResult = await _bankService.CreatePayment(paymentRequest, amount, userId, reservation.Id, isSign: false); // TODO: resolver idempotency (later)
             if (!paymentResult.Success) return Result<ReservationDetailDto>.Fail(paymentResult.Error!);
             var payment = paymentResult.Value!;
 

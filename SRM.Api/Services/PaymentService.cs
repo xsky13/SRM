@@ -203,7 +203,7 @@ namespace SRM.Api.Services
         }
 
 
-        public async Task<Result<PaymentWithUserEmailDto>> ProcessFullPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid? userId = null, Guid? reservationId = null)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessFullPayment(CreatePaymentRequest request, Guid apartmentId, Guid? userId = null, Guid? reservationId = null)
         {
             Reservation reservation;
             Guid userIdToUse;
@@ -249,7 +249,7 @@ namespace SRM.Api.Services
 
             await _db.SaveChangesAsync(); // bloquea las fechas antes de cobrar
 
-            var paymentResult = await _bankService.CreatePayment(request, amount, userIdToUse, reservation.Id, idempotencyKey, isSign: false);
+            var paymentResult = await _bankService.CreatePayment(request, amount, userIdToUse, reservation.Id, isSign: false);
             if (!paymentResult.Success)
             {
                 reservation.State = prevState ?? ReservationState.Cancelled;
@@ -283,7 +283,7 @@ namespace SRM.Api.Services
             return Result<PaymentWithUserEmailDto>.Ok(dto);
         }
 
-        public async Task<Result<PaymentWithUserEmailDto>> ProcessSignPayment(CreatePaymentRequest request, Guid apartmentId, string idempotencyKey, Guid userId, Guid? reservationId = null)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessSignPayment(CreatePaymentRequest request, Guid apartmentId, Guid userId, Guid? reservationId = null)
         {
             Reservation reservation;
             decimal amount;
@@ -323,7 +323,7 @@ namespace SRM.Api.Services
 
             await _db.SaveChangesAsync(); // guardar los datos en la base de datos para que nadie entre con los mismos datos antes
 
-            var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, idempotencyKey, isSign: true);
+            var paymentResult = await _bankService.CreatePayment(request, amount, userId, reservation.Id, isSign: true);
             if (!paymentResult.Success)
             {
                 reservation.State = prevState ?? ReservationState.Cancelled; // se setea a cancelada en el caso de que es una reserva nueva
@@ -359,7 +359,7 @@ namespace SRM.Api.Services
             return Result<PaymentWithUserEmailDto>.Ok(dto);
         }
 
-        public async Task<Result<PaymentWithUserEmailDto>> ProcessRestPayment(CreatePaymentRequest request, Guid reservationId, string idempotencyKey, Guid userId)
+        public async Task<Result<PaymentWithUserEmailDto>> ProcessRestPayment(CreatePaymentRequest request, Guid reservationId, Guid userId)
         {
             // reservation already exists
             var existingReservation = await GetPayableReservation(reservationId, userId, ReservationState.ConfirmedPaymentIncomplete);
@@ -374,7 +374,7 @@ namespace SRM.Api.Services
             reservation.State = ReservationState.PaymentPending; // evita un segundo cobro mientras este esta en curso
             await _db.SaveChangesAsync();
 
-            var paymentResult = await _bankService.CreatePayment(request, amountResult.Value, userId, reservation.Id, idempotencyKey, isSign: false);
+            var paymentResult = await _bankService.CreatePayment(request, amountResult.Value, userId, reservation.Id, isSign: false);
             if (!paymentResult.Success)
             {
                 reservation.State = prevState;
