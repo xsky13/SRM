@@ -147,7 +147,7 @@ namespace SRM.Api.Services
         public async Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
             var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
-            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
+            if (datesInvalid) return Result<Reservation>.Fail("Las fechas son inválidas, o alguien ya confirmó una reserva en el plazo que quiere reservar.");
 
 
             var reservation = new Reservation
@@ -177,7 +177,7 @@ namespace SRM.Api.Services
         public async Task<Result<Reservation>> CreateAuthReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId)
         {
             var datesInvalid = await DatesAreInvalid(checkOutDate, checkInDate, apartmentId);
-            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas");
+            if (datesInvalid) return Result<Reservation>.Fail("Las fechas son inválidas, o alguien ya confirmó una reserva en el plazo que quiere reservar.");
 
 
             var reservation = new Reservation
@@ -314,7 +314,7 @@ namespace SRM.Api.Services
 
             // checkear fechas
             var datesInvalid = await DatesAreInvalid(newEndDate, newStartDate, reservation.ApartmentId, reservation.Id);
-            if (datesInvalid) return Result<Reservation>.Fail("Fechas invalidas.");
+            if (datesInvalid) return Result<Reservation>.Fail("Las fechas son inválidas, o alguien ya confirmó una reserva en el plazo que quiere reservar.");
 
             return Result<Reservation>.Ok(reservation);
         }
