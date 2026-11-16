@@ -59,8 +59,8 @@ namespace SRM.Api.Controllers
             Response.Cookies.Append("X-Access-Token", result.Value!, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
+                Secure = true,
+                SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
 
@@ -81,8 +81,8 @@ namespace SRM.Api.Controllers
             Response.Cookies.Append("X-Access-Token", result.Value!, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
+                Secure = true,
+                SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
 
