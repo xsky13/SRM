@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+//using Npgsql;
 using Serilog;
 using SRM.Api;
 using SRM.Api.Data;
@@ -14,11 +15,51 @@ using System.Text;
 using System.Text.Json;
 
 DotNetEnv.Env.Load(); // for tests
+//for (DirectoryInfo? directory = new(Directory.GetCurrentDirectory());
+//     directory is not null;
+//     directory = directory.Parent)
+//{
+//    var envPath = Path.Combine(directory.FullName, ".env");
+//    if (File.Exists(envPath))
+//    {
+//        DotNetEnv.Env.Load(envPath);
+//        break;
+//    }
+//}
 
 
 MercadoPagoConfig.AccessToken = Environment.GetEnvironmentVariable("MP_ACCESS_TOKEN") ?? throw new InvalidOperationException("mp token not set");
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+/* FIX*/
+
+//var databaseConnectionString = builder.Configuration.GetConnectionString("DatabaseConnectionString");
+//if (string.IsNullOrWhiteSpace(databaseConnectionString))
+//{
+//    var postgresHost = builder.Configuration["POSTGRES_HOST"];
+//    var postgresUser = builder.Configuration["POSTGRES_USER"];
+//    var postgresPassword = builder.Configuration["POSTGRES_PASSWORD"];
+//    var postgresDatabase = builder.Configuration["POSTGRES_DB"];
+
+//    if (string.IsNullOrWhiteSpace(postgresHost)
+//        || string.IsNullOrWhiteSpace(postgresUser)
+//        || string.IsNullOrWhiteSpace(postgresPassword)
+//        || string.IsNullOrWhiteSpace(postgresDatabase))
+//    {
+//        throw new InvalidOperationException(
+//            "Database connection is not configured. Set ConnectionStrings:DatabaseConnectionString or all POSTGRES_* variables.");
+//    }
+
+//    databaseConnectionString = new NpgsqlConnectionStringBuilder
+//    {
+//        Host = postgresHost,
+//        Username = postgresUser,
+//        Password = postgresPassword,
+//        Database = postgresDatabase
+//    }.ConnectionString;
+//}
 
 builder.Host.UseSerilog((context, config) =>
 {
@@ -53,7 +94,8 @@ builder.Services.AddCors(options =>
 // Add services to the container.
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options
-        .UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString"))
+         .UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString"))
+        //.UseNpgsql(databaseConnectionString)
         .AddInterceptors(sp.GetRequiredService<SoftDeleteInterceptor>()));
 
 

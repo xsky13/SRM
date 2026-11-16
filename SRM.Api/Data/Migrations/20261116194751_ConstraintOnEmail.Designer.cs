@@ -12,8 +12,8 @@ using SRM.Api.Data;
 namespace SRM.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261116190741_FixedConstraint")]
-    partial class FixedConstraint
+    [Migration("20261116194751_ConstraintOnEmail")]
+    partial class ConstraintOnEmail
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -109,7 +109,7 @@ namespace SRM.Api.Data.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false AND \"Usertype\" <> 3");
+                        .HasFilter("\"IsDeleted\" = false AND \"Usertype\" < 3");
 
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = false");

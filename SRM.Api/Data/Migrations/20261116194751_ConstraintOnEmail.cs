@@ -5,21 +5,17 @@
 namespace SRM.Api.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class FixedConstraint : Migration
+    public partial class ConstraintOnEmail : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_AppUsers_Email",
-                table: "AppUsers");
-
             migrationBuilder.CreateIndex(
                 name: "IX_AppUsers_Email",
                 table: "AppUsers",
                 column: "Email",
                 unique: true,
-                filter: "\"IsDeleted\" = false AND \"Usertype\" <> 3");
+                filter: "\"IsDeleted\" = false AND \"Usertype\" < 3");
         }
 
         /// <inheritdoc />
@@ -28,12 +24,6 @@ namespace SRM.Api.Data.Migrations
             migrationBuilder.DropIndex(
                 name: "IX_AppUsers_Email",
                 table: "AppUsers");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AppUsers_Email",
-                table: "AppUsers",
-                column: "Email",
-                unique: true);
         }
     }
 }

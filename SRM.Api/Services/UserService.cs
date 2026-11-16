@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PhoneNumbers;
 using SRM.Api.Data;
 using SRM.Api.Models.Dto.User;
 using SRM.Api.Models.Entities;
@@ -7,6 +8,8 @@ using SRM.Api.Models.Pagination;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using SRM.Api.Utils.Extensions;
+using System.ComponentModel.DataAnnotations;
+using System.Text;
 using System.Text.RegularExpressions;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
@@ -14,6 +17,11 @@ namespace SRM.Api.Services
 {
     public class UserService(AppDbContext _db) : IUserService
     {
+        private static readonly PhoneNumberUtil PhoneUtil = PhoneNumberUtil.GetInstance();
+        private static readonly Regex NameRegex = new(
+            @"^\p{L}[\p{L}\p{M}]*(?:[ '\u2019-]\p{L}[\p{L}\p{M}]*)*\z",
+            RegexOptions.CultureInvariant,
+            TimeSpan.FromMilliseconds(100));
 
         public AppUser CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userType)
         {
@@ -48,23 +56,69 @@ namespace SRM.Api.Services
             return newUser;
         }
 
-        public async Task<Result<bool>> ValidateUser(AppUser user)
+
+        public string? NormalizePhone(string? phone)
         {
-            if (string.IsNullOrWhiteSpace(user.Name))
-                return Result<bool>.Fail("El primer nombre es obligatorio.");
+            if (string.IsNullOrWhiteSpace(phone)) return null;
+            try
+            {
+                var number = PhoneUtil.Parse(phone, "AR");
+                return PhoneUtil.IsValidNumber(number) ? PhoneUtil.Format(number, PhoneNumberFormat.E164) : null;
+            }
+            catch (NumberParseException) { return null; }
+        }
 
-            if (string.IsNullOrWhiteSpace(user.LastName))
-                return Result<bool>.Fail("El apellido es obligatorio.");
+        private static string NormalizeName(string s) =>
+            Regex.Replace(s.Trim(), @"\s+", " ").Normalize(NormalizationForm.FormC);
 
-            if (!Regex.IsMatch(user.Telefono, @"^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$"))
-                return Result<bool>.Fail("Telefono invalido.");
+        private static Result<bool>? ValidateName(string? raw, string label)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return Result<bool>.Fail($"{label} es obligatorio.");
+            var name = NormalizeName(raw);
+            if (name.Length > 100) return Result<bool>.Fail($"{label} es demasiado largo.");
+            if (!NameRegex.IsMatch(name)) return Result<bool>.Fail($"{label} contiene caracteres invalidos.");
+            return null;
+        }
+
+        public async Task<Result<bool>> ValidateUser(AppUser user, Guid? excludeUserId = null)
+        {
+            if (user is null)
+                return Result<bool>.Fail("Usuario invalido.");
+
+            var nameValidation = ValidateName(user.Name, "El nombre");
+            if (nameValidation != null)
+                return nameValidation;
+
+            var lastNameValidation = ValidateName(user.LastName, "El apellido");
+            if (lastNameValidation != null)
+                return lastNameValidation;
+
+            user.Name = NormalizeName(user.Name!);
+            user.LastName = NormalizeName(user.LastName!);
+
+            user.Email = user.Email?.Trim().ToLowerInvariant();
+            //user.Telefono = user.Telefono?.Trim();
+
+            var phone = NormalizePhone(user.Telefono);
+            if (phone == null) return Result<bool>.Fail("Telefono invalido.");
+            user.Telefono = phone;
 
             if (string.IsNullOrWhiteSpace(user.Email))
                 return Result<bool>.Fail("El email es obligatorio.");
 
-            if (await _db.AppUsers.AnyAsync(u => u.Email == user.Email))
-                return Result<bool>.Fail("Ya existe un usuario con ese email.");
+            if (!new EmailAddressAttribute().IsValid(user.Email))
+                return Result<bool>.Fail("El email es invalido.");
 
+            //if (await _db.AppUsers.AnyAsync(u => u.Email == user.Email))
+            //    return Result<bool>.Fail("Ya existe un usuario con ese email.");
+
+            if (await _db.AppUsers.AnyAsync(u =>
+                u.Email == user.Email &&
+                u.Id != excludeUserId &&
+                u.Usertype != UserType.Guest))
+            {
+                return Result<bool>.Fail("Ya existe un usuario con ese email.");
+            }
             return Result<bool>.Ok(true);
         }
 
@@ -125,50 +179,19 @@ namespace SRM.Api.Services
         public async Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request)
         {
             var user = await _db.AppUsers.FindAsync(userId);
-            if (user == null) return Result<UserListingDto>.Fail("El usuario no existe");
 
-            if (string.IsNullOrWhiteSpace(request.FirstName))
-                return Result<UserListingDto>.Fail("El nombre es obligatorio.");
-
-            if (request.FirstName.Length > 50)
-                return Result<UserListingDto>.Fail("El nombre no puede excederse de 50.");
-
-            if (string.IsNullOrWhiteSpace(request.LastName))
-                return Result<UserListingDto>.Fail("El apellido es obligatorio.");
-
-            if (request.LastName.Length > 50)
-                return Result<UserListingDto>.Fail("El nombre no puede excederse de 50.");
-
-            if (string.IsNullOrWhiteSpace(request.Telefono))
-                return Result<UserListingDto>.Fail("El teléfono es obligatorio.");
-
-            if (request.Telefono.Length > 20)
-                return Result<UserListingDto>.Fail("El teléfono no puede superar los 20 caracteres.");
-
-            if (!Regex.IsMatch(request.Telefono, @"^\+?[0-9\s\-()]{7,20}$"))
-                return Result<UserListingDto>.Fail("El teléfono no tiene un formato válido.");
-
-            if (string.IsNullOrWhiteSpace(request.Email))
-                return Result<UserListingDto>.Fail("El email es obligatorio.");
-
-            if (request.Email.Length > 254)
-                return Result<UserListingDto>.Fail("El email no puede superar los 254 caracteres.");
-
-            if (!System.Net.Mail.MailAddress.TryCreate(request.Email, out var emailAddress) ||
-                emailAddress.Address != request.Email)
-                return Result<UserListingDto>.Fail("El email no tiene un formato válido.");
-
-            var userWithEmail = await _db.AppUsers
-                .Where(u => u.Email == request.Email && u.Id != user.Id && u.Usertype != UserType.Guest)
-                .AnyAsync();
-
-            if (userWithEmail)
-                return Result<UserListingDto>.Fail("Ya hay un usuario con este email.");
+            if (user == null)
+                return Result<UserListingDto>.Fail("El usuario no existe.");
 
             user.Name = request.FirstName;
             user.LastName = request.LastName;
             user.Email = request.Email;
             user.Telefono = request.Telefono;
+
+            var validation = await ValidateUser(user, user.Id);
+
+            if (!validation.Success)
+                return Result<UserListingDto>.Fail(validation.Error!);
 
             await _db.SaveChangesAsync();
 

@@ -106,7 +106,7 @@ namespace SRM.Api.Data.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false AND \"Usertype\" <> 3");
+                        .HasFilter("\"IsDeleted\" = false AND \"Usertype\" < 3");
 
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = false");
