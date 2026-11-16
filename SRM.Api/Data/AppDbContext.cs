@@ -55,7 +55,8 @@ namespace SRM.Api.Data
 
             modelBuilder.Entity<AppUser>()
                 .HasIndex(u => u.Email)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("\"IsDeleted\" = false AND \"Usertype\" <> 3");
 
             modelBuilder.Entity<AppUser>()
                 .HasIndex(r => r.IsDeleted)
