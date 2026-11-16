@@ -11,6 +11,7 @@ services:
       - api_logs:/app/logs
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - Cors__AllowedOrigins=${ALLOWED_ORIGINS}
       - ApiSettings__Issuer=${ISSUER}
       - ApiSettings__Audience=${AUDIENCE}
       - Jwt__Key=${SECRET_KEY}
