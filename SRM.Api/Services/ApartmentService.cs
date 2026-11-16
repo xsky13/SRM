@@ -134,6 +134,9 @@ namespace SRM.Api.Services
                 apartment.Name = dto.Name;
             }
 
+            apartment.Latitude = dto.latitude;
+            apartment.Longitude = dto.longitude;
+
             if (!string.IsNullOrWhiteSpace(dto.Description))
             {
                 if (dto.Description.Length < 10 || dto.Description.Length > 1000)
