@@ -333,6 +333,24 @@ namespace SRM.Api.Services
 
                 var owed = totalPayed - newTotal;
 
+                if (owed > 0)
+                {
+                    // registrar el cambio en la db
+                    var newPayment = new Payment
+                    {
+                        Amount = -owed,
+                        IsManual = true,
+                        IsSign = false,
+                        IsRefund = true,
+                        PaymentDate = DateTime.UtcNow,
+                        PaymentStatus = PaymentStatus.Approved,
+                        ReservationId = reservation.Id,
+                        AppUserId = userId
+                    };
+                    _db.Payments.Add(newPayment);
+                    await _db.SaveChangesAsync();
+                }
+
                 // notificar al administrador y usuario
                 await _mailService.SendMail(
                     $"El usuario {reservation.AppUser.Email} (id {reservation.AppUser.Id}) acorto su reserva {reservation.Id}, que ya estaba pagada por completo. " +
