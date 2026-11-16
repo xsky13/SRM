@@ -9,6 +9,7 @@ namespace SRM.Api.Models.Entities
         public decimal Amount { get; set; }
         public bool IsManual { get; set; }
         public bool IsSign { get; set; }
+        public bool IsRefund { get; set; } = false;
         public DateTime PaymentDate { get; set; }
         public PaymentStatus PaymentStatus { get; set; }
         public string MpPaymentId { get; set; } = string.Empty;

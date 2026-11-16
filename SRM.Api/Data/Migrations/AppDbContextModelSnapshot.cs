@@ -154,6 +154,9 @@ namespace SRM.Api.Data.Migrations
                     b.Property<bool>("IsManual")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsRefund")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsSign")
                         .HasColumnType("boolean");
 
