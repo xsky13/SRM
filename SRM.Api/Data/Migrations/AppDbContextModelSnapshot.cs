@@ -104,6 +104,9 @@ namespace SRM.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique();
+
                     b.HasIndex("IsDeleted")
                         .HasFilter("\"IsDeleted\" = false");
 
