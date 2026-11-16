@@ -10,6 +10,7 @@ namespace SRM.Api.Models.Dto.Payment
         public decimal Amount { get; set; }
         public bool IsManual { get; set; }
         public bool IsSign { get; set; }
+        public bool IsRefund { get; set; }
         [JsonConverter(typeof(UtcDateJsonConverter))]
         public DateTime PaymentDate { get; set; }
         public PaymentStatus PaymentStatus { get; set; }
