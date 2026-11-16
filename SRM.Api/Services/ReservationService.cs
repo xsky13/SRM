@@ -7,6 +7,7 @@ using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
+using System.Globalization;
 
 
 namespace SRM.Api.Services
@@ -423,6 +424,25 @@ namespace SRM.Api.Services
                     reservation.State = ReservationState.ConfirmedPaymentComplete;
                     reservation.UpdatedAt = DateTime.UtcNow;
                     await _db.SaveChangesAsync();
+
+                    var culture = new CultureInfo("es-AR");
+
+                    await _mailService.SendMail(
+                        $"Su pago para la reserva del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)} fue aprobado y su reserva fue modificada. " +
+                        $"La entrada es el día seleccionado por la tarde, y la salida es el {reservation.CheckOutDate.AddDays(1).ToString("dd 'de' MMMM 'de' yyyy", culture)} por la mañana.",
+                        "Modificación de reserva",
+                        request.Payer.Email,
+                        null
+                    );
+
+                    await _mailService.SendMail(
+                        $"El usuario con id de {userId} (mail {request.Payer.Email}) modificó su estadía de la reserva {reservation.Id}. Las nuevas fechas son del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)}. " +
+                        $"La entrada es el día seleccionado por la tarde, y la salida es el {reservation.CheckOutDate.AddDays(1).ToString("dd 'de' MMMM 'de' yyyy", culture)} por la mañana.",
+                        "Modificación de reserva",
+                        Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("Admin mail not found"),
+                        "Administrador"
+                    );
+
                     return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
 
                 case Models.Enums.PaymentStatus.Rejected or Models.Enums.PaymentStatus.Cancelled:

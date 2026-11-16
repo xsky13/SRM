@@ -5,6 +5,7 @@ using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
+using System.Globalization;
 
 namespace SRM.Api.Services
 {
@@ -275,7 +276,24 @@ namespace SRM.Api.Services
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
             {
-                // llamar servicio de ticket
+                // notificar al usuario
+                var culture = new CultureInfo("es-AR");
+
+                await _mailService.SendMail(
+                    $"Su pago para la reserva del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)} fue aprobado. " +
+                    $"La entrada es el día seleccionado por la tarde, y la salida es el {reservation.CheckOutDate.AddDays(1).ToString("dd 'de' MMMM 'de' yyyy", culture)} por la mañana.",
+                    "Pago aprobado",
+                    request.Payer.Email,
+                    null
+                );
+
+                await _mailService.SendMail(
+                    $"Se efectuo un pago completo para la reserva con id de {reservation.Id} del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)}, con el mail {request.Payer.Email}. " +
+                    $"La entrada es el día seleccionado por la tarde, y la salida es el {reservation.CheckOutDate.AddDays(1).ToString("dd 'de' MMMM 'de' yyyy", culture)} por la mañana.",
+                    "Confirmación de reserva con pago completo",
+                    Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("Admin mail not found"),
+                    "Administrador"
+                );
             }
 
             var dto = payment.ToDtoWithUserEmail();
@@ -350,7 +368,24 @@ namespace SRM.Api.Services
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
             {
-                // llamar servicio de ticket
+                // notificar al usuario
+                var culture = new CultureInfo("es-AR");
+
+                await _mailService.SendMail(
+                    $"Su pago de seña para la reserva del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)} fue aprobado. " +
+                    $"La entrada es el día seleccionado por la tarde, y la salida es el {reservation.CheckOutDate.AddDays(1).ToString("dd 'de' MMMM 'de' yyyy", culture)} por la mañana.",
+                    "Pago aprobado",
+                    request.Payer.Email,
+                    null
+                );
+
+                await _mailService.SendMail(
+                    $"Se efectuo un pago de seña para la reserva con id de {reservation.Id} del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)}, con el mail {request.Payer.Email}. " +
+                    $"La entrada es el día seleccionado por la tarde, y la salida es el {reservation.CheckOutDate.AddDays(1).ToString("dd 'de' MMMM 'de' yyyy", culture)} por la mañana.",
+                    "Confirmación de reserva con seña",
+                    Environment.GetEnvironmentVariable("ADMIN_MAIL") ?? throw new InvalidOperationException("Admin mail not found"),
+                    "Administrador"
+                );
             }
 
             var dto = payment.ToDtoWithUserEmail();
@@ -388,7 +423,15 @@ namespace SRM.Api.Services
 
             if (payment.PaymentStatus == PaymentStatus.Approved)
             {
-                // llamar servicio de ticket
+                // notificar al usuario
+                var culture = new CultureInfo("es-AR");
+
+                await _mailService.SendMail(
+                    $"Su pago para la reserva del {reservation.CheckInDate.ToString("dd 'de' MMMM", culture)} al {reservation.CheckOutDate.ToString("dd 'de' MMMM 'de' yyyy", culture)} fue aprobado.",
+                    "Pago aprobado",
+                    request.Payer.Email,
+                    null
+                );
             }
 
             var dto = payment.ToDtoWithUserEmail();
