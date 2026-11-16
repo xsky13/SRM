@@ -9,7 +9,7 @@ namespace SRM.Api.Models.Dto.User
         public string LastName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Telefono { get; set; } = string.Empty;
-        public string? PwdHash { get; set; }
+        //public string? PwdHash { get; set; }
         public UserType Usertype { get; set; }
     }
 }
