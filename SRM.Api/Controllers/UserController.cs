@@ -115,7 +115,14 @@ namespace SRM.Api.Controllers
         [HttpPost("logout")]
         public async Task<ActionResult> Logout()
         {
-            Response.Cookies.Delete("X-Access-Token");
+            //Response.Cookies.Delete("X-Access-Token");
+            Response.Cookies.Delete("X-Access-Token", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Path = "/"
+            });
             return Ok();
         }
     }
