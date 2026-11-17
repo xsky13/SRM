@@ -11,6 +11,7 @@ using SRM.Api;
 using SRM.Api.Data;
 using SRM.Api.Services;
 using SRM.Api.Services.Interfaces;
+using SRM.Api.Services.Mail;
 using System.Text;
 using System.Text.Json;
 
@@ -116,7 +117,12 @@ builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IMailService, MailService>();
+//builder.Services.AddScoped<IMailService, SmtpMailService>();
+builder.Services.AddSingleton<MailQueue>();
+builder.Services.AddSingleton<IMailService, QueuedMailService>();
+builder.Services.AddScoped<IMailSender, SmtpMailSender>();
+builder.Services.AddHostedService<MailSenderService>();
+//builder.Services.AddHttpClient<IMailSender, HttpMailSender>(...). for http sender
 
 
 //agregar servicios de Repositorio.
