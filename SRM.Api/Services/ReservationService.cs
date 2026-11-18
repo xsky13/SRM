@@ -5,8 +5,10 @@ using SRM.Api.Models.Dto.Payment;
 using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
+using SRM.Api.Models.Pagination;
 using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
+using SRM.Api.Utils.Extensions;
 using System.Globalization;
 
 
@@ -109,16 +111,26 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin()
+        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(PaginationParameters filter)
         {
-            var reservations = await _db.Reservations
+            var query = _db.Reservations
                 .Include(r => r.AppUser)
                 .Include(r => r.Apartment)
                 .Include(r => r.Payments)
                 .AsNoTracking()
-                .OrderByDescending(r => r.CreatedAt)
-                .Select(r => r.ToReservationDetailDto())
-                .ToListAsync();
+                //.IgnoreQueryFilters()
+                .OrderBy(u => u.Id);
+
+             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+             var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
+            // var reservations = await _db.Reservations
+            //     .Include(r => r.AppUser)
+            //     .Include(r => r.Apartment)
+            //     .Include(r => r.Payments)
+            //     .AsNoTracking()
+            //     .OrderByDescending(r => r.CreatedAt)
+            //     .Select(r => r.ToReservationDetailDto())
+            //     .ToListAsync();
 
             return Result<List<ReservationDetailDto>>.Ok(reservations);
         }

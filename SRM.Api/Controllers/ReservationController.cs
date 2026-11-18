@@ -7,6 +7,7 @@ using SRM.Api.Models.Entities;
 using SRM.Api.Models.Enums;
 using System.Security.Claims;
 using SRM.Api.Utils.Extensions;
+using SRM.Api.Models.Pagination;
 
 namespace SRM.Api.Controllers
 {
@@ -99,12 +100,12 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<ActionResult<List<ReservationDetailDto>>> GetAllReservationsForAdmin()
+        public async Task<ActionResult<List<ReservationDetailDto>>> GetAllReservationsForAdmin([FromQuery] PaginationParameters filter)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();
 
-            var response = await _reservationService.GetAllForAdmin();
+            var response = await _reservationService.GetAllForAdmin(filter);
             return response.ToActionResult();
         }
 

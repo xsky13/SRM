@@ -330,11 +330,7 @@ namespace SRM.Api.Services
             if (apartment.IsDeleted)
                 return Result<Apartment>.Fail("El departamento ya ha sido eliminado", 410);
 
-            // Realizar soft delete
-            apartment.IsDeleted = true;
-            apartment.DeletedOnUTC = DateTime.UtcNow;
-
-            _db.Apartments.Update(apartment);
+            _db.Apartments.Remove(apartment);
             await _db.SaveChangesAsync();
 
             return Result<Apartment>.Ok(apartment);
