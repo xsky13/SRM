@@ -119,7 +119,7 @@ namespace SRM.Api.Services
                 .Include(r => r.Apartment)
                 .Include(r => r.Payments)
                 .AsNoTracking()
-                //.IgnoreQueryFilters()
+                .IgnoreQueryFilters()
                 .OrderByDescending(r => r.CreatedAt);
 
              var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
@@ -545,7 +545,7 @@ namespace SRM.Api.Services
                 .Include(r => r.Apartment)
                 .Include(r => r.Payments)
                 .AsNoTracking()
-                //.IgnoreQueryFilters()
+                .IgnoreQueryFilters()
                 .Where(r => r.ApartmentId == apartmentId);
 
             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
@@ -561,7 +561,7 @@ namespace SRM.Api.Services
                 .Include(r => r.Apartment)
                 .Include(r => r.Payments)
                 .AsNoTracking()
-                //.IgnoreQueryFilters()
+                .IgnoreQueryFilters()
                 .Where(r => r.AppUserId == userId);
 
             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);

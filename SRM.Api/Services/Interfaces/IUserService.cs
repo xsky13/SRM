@@ -9,6 +9,7 @@ namespace SRM.Api.Services.Interfaces
     public interface IUserService
     {
         AppUser CreateUser(string firstName, string lastName, string telefono, string email, string pwd, UserType userTyp);
+        Task<Result<UserListingDto>> GetUserById(Guid userId);
         AppUser CreateUser(string email);
         Task<Result<bool>> ValidateUser(AppUser user, Guid? excludeUserId = null);
         Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request);

@@ -13,15 +13,18 @@ namespace SRM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ReservationController(IReservationService _reservationService, IUserService _userService, IPaymentService _paymentService, IMailService _mailService) : ControllerBase
+    public class ReservationController(IReservationService _reservationService, IUserService _userService, IPaymentService _paymentService) : ControllerBase
     {
         [HttpGet("{id}")]
-        public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(Guid id)
+        public async Task<ActionResult<ReservationDetailDto>> GetByReservationId(string id) // uso string para el id, porque si uso guid y mando uno invalido va a fallar con error 400 sin mensjae especifico
         {
             var userId = User.GetUserId();
             if (userId == null) return Unauthorized();
 
-            var response = await _reservationService.GetReservationById(id, userId.Value);
+            if (!Guid.TryParse(id, out var reservationId))
+                return BadRequest(new { Error = "El ID de reserva no es válido." });
+
+            var response = await _reservationService.GetReservationById(reservationId, userId.Value);
             return response.ToActionResult();
         }
 

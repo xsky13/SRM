@@ -11,7 +11,6 @@ using SRM.Api.Utils.Extensions;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.RegularExpressions;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SRM.Api.Services
 {
@@ -218,6 +217,18 @@ namespace SRM.Api.Services
             var users = response.Data.Select(u => u.ToListingDto()).ToList();
 
             return users;
+        }
+
+        public async Task<Result<UserListingDto>> GetUserById(Guid userId)
+        {
+            var user = await _db.AppUsers
+                .Where(u => u.Id == userId)
+                .Select(u => u.ToListingDto())
+                .FirstOrDefaultAsync();
+
+            if (user == null) return Result<UserListingDto>.Fail("El usuario no existe", 404);
+
+            return Result<UserListingDto>.Ok(user);
         }
     }
 }

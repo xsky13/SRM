@@ -28,6 +28,17 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserListingDto>> GetUserById(string id)
+        {
+            if (!Guid.TryParse(id, out var userId))
+                return BadRequest(new { Error = "El ID del usuario no es válido."});
+
+            var response = await _userService.GetUserById(userId);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
         [HttpGet("list")]
         public async Task<ActionResult<UserListingDto>> ListUsers([FromQuery] PaginationParameters filter)
         {

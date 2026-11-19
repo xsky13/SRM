@@ -11,5 +11,6 @@ namespace SRM.Api.Models.Dto.User
         public string Telefono { get; set; } = string.Empty;
         //public string? PwdHash { get; set; }
         public UserType Usertype { get; set; }
+        public bool? IsDeleted { get; set; }
     }
 }
