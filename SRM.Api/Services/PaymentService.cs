@@ -125,7 +125,7 @@ namespace SRM.Api.Services
                 return Result<PaymentDto>.Fail("No se encontro la reserva", 404);
 
             if (reservation.State != ReservationState.NotConfirmed && reservation.State != ReservationState.ConfirmedPaymentIncomplete)
-                return Result<PaymentDto>.Fail("No se puede agregar un pago a una reserva cancelada.");
+                return Result<PaymentDto>.Fail("No se puede agregar un pago a una reserva cancelada, completa, o con pago pendiente.");
 
             if (reservation.State == ReservationState.NotConfirmed)
             {
