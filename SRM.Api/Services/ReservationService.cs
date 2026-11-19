@@ -32,6 +32,7 @@ namespace SRM.Api.Services
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
                     AppUserId = r.AppUserId,
+                    AppUser = r.AppUser.ToListingDto(),
                     Payments = r.Payments.Select(p => p.ToDto()).ToList(),
                     Apartment = new ApartmentListingDto(r.ApartmentId, r.Apartment.Name, r.Apartment.CoverImgUrl, r.Apartment.Location, r.Apartment.Price)
                 })
@@ -119,7 +120,7 @@ namespace SRM.Api.Services
                 .Include(r => r.Payments)
                 .AsNoTracking()
                 //.IgnoreQueryFilters()
-                .OrderBy(u => u.Id);
+                .OrderByDescending(r => r.CreatedAt);
 
              var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
              var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
