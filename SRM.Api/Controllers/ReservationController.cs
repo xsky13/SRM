@@ -110,6 +110,28 @@ namespace SRM.Api.Controllers
         }
 
         [Authorize]
+        [HttpGet("admin/apartment/{apartmentId}")]
+        public async Task<ActionResult<List<ReservationDetailDto>>> GetReservationsByAppartmentIdForAdmin([FromQuery] PaginationParameters filter, Guid apartmentId)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.ListReservationsByApartmentAdmin(apartmentId, filter);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
+        [HttpGet("admin/user/{userId}")]
+        public async Task<ActionResult<List<ReservationDetailDto>>> GetReservationsByUserIdForAdmin([FromQuery] PaginationParameters filter, Guid userId)
+        {
+            if (!User.IsInRole(UserType.Admin.ToString()))
+                return Forbid();
+
+            var response = await _reservationService.ListReservationsByUserAdmin(userId, filter);
+            return response.ToActionResult();
+        }
+
+        [Authorize]
         [HttpDelete("{id}/admin")]
         public async Task<ActionResult<ReservationDetailDto>> AdminCancelReservation(Guid id)
         {

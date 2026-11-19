@@ -143,35 +143,45 @@ namespace SRM.Api.Services
 
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
-
-        public async Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, int limit)
+        
+        public async Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter)
         {
-            if (limit <= 0)
-                return Result<List<UserSearchDto>>.Fail("El límite debe ser mayor que cero.");
+            if (filter.PageNumber < 1 || filter.PageNumber > 100_000)
+                return Result<List<UserSearchDto>>.Fail("La pagina debe ser mayor que 0.");
+
+            if (filter.PageSize < 1 || filter.PageSize > 50)
+                return Result<List<UserSearchDto>>.Fail($"El tamaño de pagina debe estar entre 1 y {50}.");
 
             var usersQuery = _db.AppUsers
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(query))
+            var term = query?.Trim();
+            if (!string.IsNullOrEmpty(term))
             {
+                if (term.Length > 100)
+                    return Result<List<UserSearchDto>>.Fail("La busqueda es demasiado larga.");
+
+                var pattern = $"%{Escape.EscapeLike(term)}%";
                 usersQuery = usersQuery.Where(u =>
-                    u.Name.Contains(query) ||
-                    u.LastName.Contains(query) ||
-                    u.Email.Contains(query));
+                    EF.Functions.ILike(u.Name, pattern) ||
+                    EF.Functions.ILike(u.LastName, pattern) ||
+                    EF.Functions.ILike(u.Email, pattern));
             }
 
-            var users = await usersQuery
-                .Take(limit)
+            var response = await usersQuery
+                .OrderBy(u => u.LastName).ThenBy(u => u.Name).ThenBy(u => u.Id)
                 .Select(u => new UserSearchDto
                 {
                     Id = u.Id,
-                    FirstName = u.Name,
+                    Name = u.Name,
                     LastName = u.LastName,
                     Email = u.Email,
-                    Telefono = u.Telefono
+                    Telefono = u.Telefono,
+                    Usertype = u.Usertype
                 })
-                .ToListAsync();
+                .ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            var users = response.Data.ToList();
 
             return Result<List<UserSearchDto>>.Ok(users);
         }

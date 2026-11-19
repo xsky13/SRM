@@ -17,7 +17,10 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
         public Task<Result<Reservation>> CreateAuthReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);
         public Task<Result<Reservation>> AdminCreateReservationAsync(AdminCreateReservationDto request);
-        
+
+        public Task<Result<List<ReservationDetailDto>>> ListReservationsByApartmentAdmin(Guid apartmentId, PaginationParameters filter);
+        public Task<Result<List<ReservationDetailDto>>> ListReservationsByUserAdmin(Guid userId, PaginationParameters filter);
+
 
         Task<Result<Reservation>> ValidateReservation(DateTime newEndDate, DateTime newStartDate, Guid reservationId, Guid userId);
 

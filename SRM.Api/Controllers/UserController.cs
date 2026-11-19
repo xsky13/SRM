@@ -40,12 +40,12 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet("search")]
-        public async Task<ActionResult<List<UserSearchDto>>> SearchUsers(string? query, int limit = 10)
+        public async Task<ActionResult<List<UserSearchDto>>> SearchUsers([FromQuery] PaginationParameters filter, string? query)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();
 
-            var response = await _userService.SearchUsersAsync(query, limit);
+            var response = await _userService.SearchUsersAsync(query, filter);
             return response.ToActionResult();
         }
 

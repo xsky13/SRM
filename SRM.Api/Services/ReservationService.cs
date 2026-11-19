@@ -537,6 +537,38 @@ namespace SRM.Api.Services
 
             return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
+
+        public async Task<Result<List<ReservationDetailDto>>> ListReservationsByApartmentAdmin(Guid apartmentId, PaginationParameters filter)
+        {
+            var query = _db.Reservations
+                .Include(r => r.AppUser)
+                .Include(r => r.Apartment)
+                .Include(r => r.Payments)
+                .AsNoTracking()
+                //.IgnoreQueryFilters()
+                .Where(r => r.ApartmentId == apartmentId);
+
+            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
+
+            return Result<List<ReservationDetailDto>>.Ok(reservations);
+        }
+
+        public async Task<Result<List<ReservationDetailDto>>> ListReservationsByUserAdmin(Guid userId, PaginationParameters filter)
+        {
+            var query = _db.Reservations
+                .Include(r => r.AppUser)
+                .Include(r => r.Apartment)
+                .Include(r => r.Payments)
+                .AsNoTracking()
+                //.IgnoreQueryFilters()
+                .Where(r => r.AppUserId == userId);
+
+            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
+
+            return Result<List<ReservationDetailDto>>.Ok(reservations);
+        }
     }
 }
 

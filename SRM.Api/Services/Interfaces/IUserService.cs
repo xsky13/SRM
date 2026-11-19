@@ -15,7 +15,7 @@ namespace SRM.Api.Services.Interfaces
         Task<bool> UserExists(Guid userId);
         Task<Result<UserListingDto>> GetUser(Guid userId);
         Task<List<UserListingDto>> ListUsers(PaginationParameters filter);
-        Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, int limit);
+        Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter);
         Task DeleteUser(Guid userId);
     }
 }
