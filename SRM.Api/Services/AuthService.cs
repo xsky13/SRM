@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace SRM.Api.Services
 {
-    public class AuthService(AppDbContext _db, ITokenService _tokenService) : IAuthService
+    public class AuthService(AppDbContext _db, ITokenService _tokenService, IUserService _userService) : IAuthService
     {
         public async Task<Result<string>> LoginUser(string email, string pwd)
         {
@@ -33,23 +33,23 @@ namespace SRM.Api.Services
 
         public async Task<Result<string>> RegisterUser(string firstName, string lastName, string telefono, string email, string pwd)
         {
-            if (string.IsNullOrWhiteSpace(firstName))
-                return Result<string>.Fail("El primer nombre es obligatorio.");
+            //if (string.IsNullOrWhiteSpace(firstName))
+            //    return Result<string>.Fail("El primer nombre es obligatorio.");
 
-            if (string.IsNullOrWhiteSpace(lastName))
-                return Result<string>.Fail("El apellido es obligatorio.");
+            //if (string.IsNullOrWhiteSpace(lastName))
+            //    return Result<string>.Fail("El apellido es obligatorio.");
 
-            if (!Regex.IsMatch(telefono, @"^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$"))
-                return Result<string>.Fail("Telefono invalido.");
+            //if (!Regex.IsMatch(telefono, @"^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$"))
+            //    return Result<string>.Fail("Telefono invalido.");
 
-            if (string.IsNullOrWhiteSpace(email))
-                return Result<string>.Fail("El email es obligatorio.");
+            //if (string.IsNullOrWhiteSpace(email))
+            //    return Result<string>.Fail("El email es obligatorio.");
 
-            if (string.IsNullOrWhiteSpace(pwd) || pwd.Length < 6)
-                return Result<string>.Fail("La contraseña debe tener al menos 6 caracteres.");
+            //if (string.IsNullOrWhiteSpace(pwd) || pwd.Length < 6)
+            //    return Result<string>.Fail("La contraseña debe tener al menos 6 caracteres.");
 
-            if (await _db.AppUsers.AnyAsync(user => user.Email == email && user.Usertype != Models.Enums.UserType.Guest))
-                return Result<string>.Fail("Ya existe un usuario con ese email.");
+            //if (await _db.AppUsers.AnyAsync(user => user.Email == email && user.Usertype != Models.Enums.UserType.Guest))
+            //    return Result<string>.Fail("Ya existe un usuario con ese email.");
 
             var newUser = new AppUser
             {
@@ -60,6 +60,9 @@ namespace SRM.Api.Services
                 PwdHash = BCrypt.Net.BCrypt.HashPassword(pwd),
                 Usertype = Models.Enums.UserType.User
             };
+
+            var validateUserResult = await _userService.ValidateUser(newUser);
+            if (!validateUserResult.Success) return Result<string>.Fail(validateUserResult!.Error);
 
             _db.AppUsers.Add(newUser);
             await _db.SaveChangesAsync();
