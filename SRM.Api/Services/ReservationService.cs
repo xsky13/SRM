@@ -530,6 +530,12 @@ namespace SRM.Api.Services
             if (reservation.State == ReservationState.Cancelled)
                 return Result<ReservationDetailDto>.Fail("La reserva ya está cancelada.", 400);
 
+            if (DateTime.UtcNow > reservation.CheckOutDate)
+                return Result<ReservationDetailDto>.Fail("No se pueden cancelar reservas pasadas.");
+
+            if (DateTime.UtcNow > reservation.CheckInDate.AddHours(-24))
+                return Result<ReservationDetailDto>.Fail($"No se puede cancelar: faltan menos de 24 hs para el check-in ({reservation.CheckInDate:dd/MM/yyyy HH:mm}).");
+
             reservation.State = ReservationState.Cancelled;
             reservation.UpdatedAt = DateTime.UtcNow;
 
