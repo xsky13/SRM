@@ -327,8 +327,14 @@ namespace SRM.Api.Services
             if (apartment == null)
                 return Result<Apartment>.Fail("No se encontró el departamento", 404);
 
-            if (apartment.IsDeleted)
-                return Result<Apartment>.Fail("El departamento ya ha sido eliminado", 410);
+            var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
+            // fijarse si hay reservas pendientes 
+            var existingReservations = await _db.Reservations
+                .Where(r => r.ApartmentId == id && r.CheckOutDate >= DateTime.UtcNow && r.State != ReservationState.Cancelled)
+                .AnyAsync();
+
+            if (existingReservations) return Result<Apartment>.Fail("Todavía hay reservas pendientes en este departamento");
 
             _db.Apartments.Remove(apartment);
             await _db.SaveChangesAsync();
