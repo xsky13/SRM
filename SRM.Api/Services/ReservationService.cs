@@ -604,7 +604,7 @@ namespace SRM.Api.Services
             return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
 
-        public async Task<Result<List<ReservationDetailDto>>> ListReservationsByApartmentAdmin(Guid apartmentId, PaginationParameters filter)
+        public async Task<Result<PagedResponse<ReservationDetailDto>>> ListReservationsByApartmentAdmin(Guid apartmentId, PaginationParameters filter)
         {
             var query = _db.Reservations
                 .Include(r => r.AppUser)
@@ -612,15 +612,15 @@ namespace SRM.Api.Services
                 .Include(r => r.Payments)
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Where(r => r.ApartmentId == apartmentId);
+                .Where(r => r.ApartmentId == apartmentId)
+                .Select(r => r.ToReservationDetailDto());
 
             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
-            var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
 
-            return Result<List<ReservationDetailDto>>.Ok(reservations);
+            return Result<PagedResponse<ReservationDetailDto>>.Ok(response);
         }
 
-        public async Task<Result<List<ReservationDetailDto>>> ListReservationsByUserAdmin(Guid userId, PaginationParameters filter)
+        public async Task<Result<PagedResponse<ReservationDetailDto>>> ListReservationsByUserAdmin(Guid userId, PaginationParameters filter)
         {
             var query = _db.Reservations
                 .Include(r => r.AppUser)
@@ -628,12 +628,12 @@ namespace SRM.Api.Services
                 .Include(r => r.Payments)
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Where(r => r.AppUserId == userId);
+                .Where(r => r.AppUserId == userId)
+                .Select(r => r.ToReservationDetailDto());
 
             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
-            var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
 
-            return Result<List<ReservationDetailDto>>.Ok(reservations);
+            return Result<PagedResponse<ReservationDetailDto>>.Ok(response);
         }
     }
 }
