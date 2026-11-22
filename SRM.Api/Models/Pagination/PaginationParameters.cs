@@ -9,7 +9,7 @@
         public int PageSize
         {
             get => _pageSize;
-            set => _pageSize = (value > MaxPageSize) ? MaxPageSize : value; // Cap maximum page size
+            set => _pageSize = (value > MaxPageSize) ? MaxPageSize : (value <= 0) ? 1 : value; // Cap maximum page size
         }
     }
 }
