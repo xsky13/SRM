@@ -112,26 +112,37 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(PaginationParameters filter)
+        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter)
         {
-            var query = _db.Reservations
-                .Include(r => r.AppUser)
-                .Include(r => r.Apartment)
-                .Include(r => r.Payments)
-                .AsNoTracking()
-                .IgnoreQueryFilters()
-                .OrderByDescending(r => r.CreatedAt);
+            var query = filter.DateFilter switch
+            {
+                FilterType.Future => _db.Reservations
+                    .Where(r => r.CheckOutDate.Date >= DateTime.UtcNow.Date)
+                    .Include(r => r.AppUser)
+                    .Include(r => r.Apartment)
+                    .Include(r => r.Payments)
+                    .AsNoTracking()
+                    .IgnoreQueryFilters()
+                    .OrderByDescending(r => r.CreatedAt),
+                FilterType.Past => _db.Reservations
+                    .Where(r => r.CheckOutDate.Date < DateTime.UtcNow.Date)
+                    .Include(r => r.AppUser)
+                    .Include(r => r.Apartment)
+                    .Include(r => r.Payments)
+                    .AsNoTracking()
+                    .IgnoreQueryFilters()
+                    .OrderByDescending(r => r.CreatedAt),
+                _ => _db.Reservations
+                    .Include(r => r.AppUser)
+                    .Include(r => r.Apartment)
+                    .Include(r => r.Payments)
+                    .AsNoTracking()
+                    .IgnoreQueryFilters()
+                    .OrderByDescending(r => r.CreatedAt)
+            }; 
 
              var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
              var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
-            // var reservations = await _db.Reservations
-            //     .Include(r => r.AppUser)
-            //     .Include(r => r.Apartment)
-            //     .Include(r => r.Payments)
-            //     .AsNoTracking()
-            //     .OrderByDescending(r => r.CreatedAt)
-            //     .Select(r => r.ToReservationDetailDto())
-            //     .ToListAsync();
 
             return Result<List<ReservationDetailDto>>.Ok(reservations);
         }
