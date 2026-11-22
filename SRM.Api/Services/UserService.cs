@@ -231,10 +231,11 @@ namespace SRM.Api.Services
 
         public async Task<Result<bool>> UserCanDeleteAccount(Guid userId)
         {
+            var today = DateTime.UtcNow.Date;
             if (!await UserExists(userId)) return Result<bool>.Fail("El usuario no existe.");
 
             var userReservations = await _db.Reservations
-                .Where(r => r.CheckOutDate.Date >= DateTime.UtcNow.Date && r.State != ReservationState.Cancelled && r.AppUserId == userId)
+                .Where(r => r.CheckOutDate.Date >= today && r.State != ReservationState.Cancelled && r.AppUserId == userId)
                 .AnyAsync();
 
             if (userReservations) return Result<bool>.Fail("No puede eliminar su cuenta con reservas pendientes. Si realmente quiere continuar, debe cancelar todas las que tiene programadas a futuro.");

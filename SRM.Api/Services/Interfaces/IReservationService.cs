@@ -16,7 +16,7 @@ namespace SRM.Api.Services.Interfaces
         public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, PaginationParameters filter);
 
 
-        public Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter);
+        public Task<Result<PagedResponse<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter);
 
         public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null);
         public Task<Result<Reservation>> CreateReservation(DateTime checkInDate, DateTime checkOutDate, Guid apartmentId, Guid userId);

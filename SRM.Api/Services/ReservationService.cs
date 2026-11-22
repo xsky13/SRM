@@ -120,9 +120,10 @@ namespace SRM.Api.Services
 
         public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, PaginationParameters filter)
         {
+            var today = DateTime.UtcNow.Date;
             var query = _db.Reservations
                 .AsNoTracking()
-                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= DateTime.UtcNow.Date)
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= today)
                 .Select(r => new ReservationListingDto
                 {
                     Id = r.Id,
@@ -140,9 +141,10 @@ namespace SRM.Api.Services
 
         public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, PaginationParameters filter)
         {
+            var today = DateTime.UtcNow.Date;
             var query = _db.Reservations
                 .AsNoTracking()
-                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date <= DateTime.UtcNow.Date)
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date <= today)
                 .Select(r => new ReservationListingDto
                 {
                     Id = r.Id,
@@ -161,39 +163,31 @@ namespace SRM.Api.Services
 
 
 
-        public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter)
+        public async Task<Result<PagedResponse<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter)
         {
-            var query = filter.DateFilter switch
+            var today = DateTime.UtcNow.Date; // fuera de la query: viaja como parametro
+
+            IQueryable<Reservation> query = _db.Reservations
+                .AsNoTracking()
+                .IgnoreQueryFilters();
+
+            query = filter.DateFilter switch
             {
-                FilterType.Future => _db.Reservations
-                    .Where(r => r.CheckOutDate.Date >= DateTime.UtcNow.Date)
-                    .Include(r => r.AppUser)
-                    .Include(r => r.Apartment)
-                    .Include(r => r.Payments)
-                    .AsNoTracking()
-                    .IgnoreQueryFilters()
-                    .OrderByDescending(r => r.CheckInDate),
-                FilterType.Past => _db.Reservations
-                    .Where(r => r.CheckOutDate.Date < DateTime.UtcNow.Date)
-                    .Include(r => r.AppUser)
-                    .Include(r => r.Apartment)
-                    .Include(r => r.Payments)
-                    .AsNoTracking()
-                    .IgnoreQueryFilters()
-                    .OrderByDescending(r => r.CheckInDate),
-                _ => _db.Reservations
-                    .Include(r => r.AppUser)
-                    .Include(r => r.Apartment)
-                    .Include(r => r.Payments)
-                    .AsNoTracking()
-                    .IgnoreQueryFilters()
-                    .OrderByDescending(r => r.CheckInDate)
-            }; 
+                FilterType.Future => query.Where(r => r.CheckOutDate >= today),
+                FilterType.Past => query.Where(r => r.CheckOutDate < today),
+                _ => query
+            };
 
-             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
-             var reservations = response.Data.Select(r => r.ToReservationDetailDto()).ToList();
+            var response = await query
+                .Include(r => r.Apartment)
+                .Include(r => r.AppUser)
+                .Include(r => r.Payments)
+                .OrderByDescending(r => r.CheckInDate)
+                .ThenBy(r => r.Id)
+                .Select(r => r.ToReservationDetailDto())
+                .ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
 
-            return Result<List<ReservationDetailDto>>.Ok(reservations);
+            return Result<PagedResponse<ReservationDetailDto>>.Ok(response);
         }
 
         public async Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null)

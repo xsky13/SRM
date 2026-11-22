@@ -121,7 +121,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet]
-        public async Task<ActionResult<List<ReservationDetailDto>>> GetAllReservationsForAdmin([FromQuery] AdminReservationParameterQuery filter)
+        public async Task<ActionResult<PagedResponse<ReservationDetailDto>>> GetAllReservationsForAdmin([FromQuery] AdminReservationParameterQuery filter)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();
