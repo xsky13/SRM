@@ -1,5 +1,4 @@
-﻿using SRM.Api.Models.Dto.Apartment;
-using SRM.Api.Models.Dto.Reservation;
+﻿using SRM.Api.Models.Dto.Reservation;
 using SRM.Api.Models.Entities;
 using SRM.Api.Models.Pagination;
 using SRM.Api.Utils;
@@ -10,7 +9,13 @@ namespace SRM.Api.Services.Interfaces
     {
         public Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid apartmentId);
         public Task<Result<ReservationDetailDto>> GetReservationById(Guid id, Guid userId);
-        public Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId);
+
+
+        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserId(Guid userId, PaginationParameters filter);
+        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, PaginationParameters filter);
+        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, PaginationParameters filter);
+
+
         public Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter);
 
         public Task<bool> DatesAreInvalid(DateTime checkOutDate, DateTime checkInDate, Guid apartmentId, Guid? excludeReservationId = null);

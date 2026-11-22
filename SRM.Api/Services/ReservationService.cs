@@ -66,6 +66,7 @@ namespace SRM.Api.Services
 
         }
 
+
         public async Task<Result<List<ReservationListingDto>>> GetAllByApartmentId(Guid id)
         {
             // Start of today in UTC (00:00:00)
@@ -94,9 +95,12 @@ namespace SRM.Api.Services
             return Result<List<ReservationListingDto>>.Ok(reservations);
         }
 
-        public async Task<Result<List<ReservationListingDto>>> GetByUserId(Guid userId)
+
+
+
+        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserId(Guid userId, PaginationParameters filter)
         {
-            var reservations = await _db.Reservations
+            var query = _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.AppUserId == userId)
                 .Select(r => new ReservationListingDto
@@ -108,9 +112,54 @@ namespace SRM.Api.Services
                     ReservationState = r.State,
                     ApartmentName = r.Apartment.Name
                 })
-                .ToListAsync();
-            return Result<List<ReservationListingDto>>.Ok(reservations);
+                .OrderByDescending(r => r.CheckInDate);
+
+            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            return Result<PagedResponse<ReservationListingDto>>.Ok(response);
         }
+
+        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, PaginationParameters filter)
+        {
+            var query = _db.Reservations
+                .AsNoTracking()
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= DateTime.UtcNow.Date)
+                .Select(r => new ReservationListingDto
+                {
+                    Id = r.Id,
+                    CheckInDate = r.CheckInDate,
+                    CheckOutDate = r.CheckOutDate,
+                    ApartmentId = r.ApartmentId,
+                    ReservationState = r.State,
+                    ApartmentName = r.Apartment.Name
+                })
+                .OrderByDescending(r => r.CheckInDate);
+
+            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            return Result<PagedResponse<ReservationListingDto>>.Ok(response);
+        }
+
+        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, PaginationParameters filter)
+        {
+            var query = _db.Reservations
+                .AsNoTracking()
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date <= DateTime.UtcNow.Date)
+                .Select(r => new ReservationListingDto
+                {
+                    Id = r.Id,
+                    CheckInDate = r.CheckInDate,
+                    CheckOutDate = r.CheckOutDate,
+                    ApartmentId = r.ApartmentId,
+                    ReservationState = r.State,
+                    ApartmentName = r.Apartment.Name
+                })
+                .OrderByDescending(r => r.CheckInDate);
+
+            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            return Result<PagedResponse<ReservationListingDto>>.Ok(response);
+        }
+
+
+
 
         public async Task<Result<List<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter)
         {
@@ -123,7 +172,7 @@ namespace SRM.Api.Services
                     .Include(r => r.Payments)
                     .AsNoTracking()
                     .IgnoreQueryFilters()
-                    .OrderByDescending(r => r.CreatedAt),
+                    .OrderByDescending(r => r.CheckInDate),
                 FilterType.Past => _db.Reservations
                     .Where(r => r.CheckOutDate.Date < DateTime.UtcNow.Date)
                     .Include(r => r.AppUser)
@@ -131,14 +180,14 @@ namespace SRM.Api.Services
                     .Include(r => r.Payments)
                     .AsNoTracking()
                     .IgnoreQueryFilters()
-                    .OrderByDescending(r => r.CreatedAt),
+                    .OrderByDescending(r => r.CheckInDate),
                 _ => _db.Reservations
                     .Include(r => r.AppUser)
                     .Include(r => r.Apartment)
                     .Include(r => r.Payments)
                     .AsNoTracking()
                     .IgnoreQueryFilters()
-                    .OrderByDescending(r => r.CreatedAt)
+                    .OrderByDescending(r => r.CheckInDate)
             }; 
 
              var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
