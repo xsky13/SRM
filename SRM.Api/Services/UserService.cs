@@ -143,23 +143,31 @@ namespace SRM.Api.Services
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
         
-        public async Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter)
+        public async Task<Result<PagedResponse<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter)
         {
             if (filter.PageNumber < 1 || filter.PageNumber > 100_000)
-                return Result<List<UserSearchDto>>.Fail("La pagina debe ser mayor que 0.");
+                return Result<PagedResponse<UserSearchDto>>.Fail("La pagina debe ser mayor que 0.");
 
             if (filter.PageSize < 1 || filter.PageSize > 50)
-                return Result<List<UserSearchDto>>.Fail($"El tamaño de pagina debe estar entre 1 y {50}.");
+                return Result<PagedResponse<UserSearchDto>>.Fail($"El tamaño de pagina debe estar entre 1 y {50}.");
 
             var usersQuery = _db.AppUsers
                 .AsNoTracking()
-                .AsQueryable();
+                .Select(u => new UserSearchDto
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    Telefono = u.Telefono,
+                    Usertype = u.Usertype
+                });
 
             var term = query?.Trim();
             if (!string.IsNullOrEmpty(term))
             {
                 if (term.Length > 100)
-                    return Result<List<UserSearchDto>>.Fail("La busqueda es demasiado larga.");
+                    return Result<PagedResponse<UserSearchDto>>.Fail("La busqueda es demasiado larga.");
 
                 var pattern = $"%{Escape.EscapeLike(term)}%";
                 usersQuery = usersQuery.Where(u =>
@@ -170,19 +178,9 @@ namespace SRM.Api.Services
 
             var response = await usersQuery
                 .OrderBy(u => u.LastName).ThenBy(u => u.Name).ThenBy(u => u.Id)
-                .Select(u => new UserSearchDto
-                {
-                    Id = u.Id,
-                    Name = u.Name,
-                    LastName = u.LastName,
-                    Email = u.Email,
-                    Telefono = u.Telefono,
-                    Usertype = u.Usertype
-                })
                 .ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
-            var users = response.Data.ToList();
 
-            return Result<List<UserSearchDto>>.Ok(users);
+            return Result<PagedResponse<UserSearchDto>>.Ok(response);
         }
 
         public async Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request)
@@ -207,16 +205,16 @@ namespace SRM.Api.Services
             return Result<UserListingDto>.Ok(user.ToListingDto());
         }
 
-        public async Task<List<UserListingDto>> ListUsers(PaginationParameters filter)
+        public async Task<PagedResponse<UserListingDto>> ListUsers(PaginationParameters filter)
         {
             var query = _db.AppUsers
                 .AsNoTracking()
-                .OrderBy(u => u.Id);
+                .OrderBy(u => u.Id)
+                .Select(u => u.ToListingDto());
 
             var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
-            var users = response.Data.Select(u => u.ToListingDto()).ToList();
 
-            return users;
+            return response;
         }
 
         public async Task<Result<UserListingDto>> GetUserById(Guid userId)

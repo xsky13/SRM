@@ -40,7 +40,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet("list")]
-        public async Task<ActionResult<UserListingDto>> ListUsers([FromQuery] PaginationParameters filter)
+        public async Task<ActionResult<PagedResponse<UserListingDto>>> ListUsers([FromQuery] PaginationParameters filter)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();
@@ -51,7 +51,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet("search")]
-        public async Task<ActionResult<List<UserSearchDto>>> SearchUsers([FromQuery] PaginationParameters filter, string? query)
+        public async Task<ActionResult<PagedResponse<UserSearchDto>>> SearchUsers([FromQuery] PaginationParameters filter, string? query)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();

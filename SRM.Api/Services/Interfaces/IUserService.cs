@@ -15,8 +15,8 @@ namespace SRM.Api.Services.Interfaces
         Task<Result<UserListingDto>> UpdateUser(Guid userId, UpdateUserRequestDto request);
         Task<bool> UserExists(Guid userId);
         Task<Result<UserListingDto>> GetUser(Guid userId);
-        Task<List<UserListingDto>> ListUsers(PaginationParameters filter);
-        Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter);
+        Task<PagedResponse<UserListingDto>> ListUsers(PaginationParameters filter);
+        Task<Result<PagedResponse<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter);
         Task DeleteUser(Guid userId);
 
         Task<Result<bool>> UserCanDeleteAccount(Guid userId);
