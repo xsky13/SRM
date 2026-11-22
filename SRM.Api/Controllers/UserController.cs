@@ -118,6 +118,14 @@ namespace SRM.Api.Controllers
         public async Task<ActionResult> DeleteUser()
         {
             var userId = User.GetUserId();
+            if (userId == null) return BadRequest(new { Error = "Id de usuario nulo." });
+
+            if (User.IsInRole(UserType.Admin.ToString()))
+                return BadRequest(new { Error = "Como administrador, no puede eliminar su cuenta." });
+
+            var userCanDeleteAccount = await _userService.UserCanDeleteAccount(userId.Value);
+            if (!userCanDeleteAccount.Success) return BadRequest(new { Error = userCanDeleteAccount.Error });
+
             await _userService.DeleteUser(userId.Value);
             return Ok(new { Success = true });
         }

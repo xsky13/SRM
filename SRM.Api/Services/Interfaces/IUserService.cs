@@ -18,5 +18,7 @@ namespace SRM.Api.Services.Interfaces
         Task<List<UserListingDto>> ListUsers(PaginationParameters filter);
         Task<Result<List<UserSearchDto>>> SearchUsersAsync(string? query, PaginationParameters filter);
         Task DeleteUser(Guid userId);
+
+        Task<Result<bool>> UserCanDeleteAccount(Guid userId);
     }
 }
