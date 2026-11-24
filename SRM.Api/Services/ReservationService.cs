@@ -102,7 +102,7 @@ namespace SRM.Api.Services
         {
             var query = _db.Reservations
                 .AsNoTracking()
-                .Where(r => r.AppUserId == userId)
+                .Where(r => r.AppUserId == userId && !r.IsDeleted && !r.Apartment.IsDeleted)
                 .Select(r => new ReservationListingDto
                 {
                     Id = r.Id,
