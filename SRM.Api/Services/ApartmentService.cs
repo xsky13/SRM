@@ -6,8 +6,6 @@ using SRM.Api.Services.Interfaces;
 using SRM.Api.Utils;
 using SRM.Api.Models.Enums;
 using SRM.Api.Models.Dto.Images;
-using Microsoft.Extensions.Hosting; 
-using System.IO;
 
 namespace SRM.Api.Services
 {
@@ -31,7 +29,8 @@ namespace SRM.Api.Services
                     apartment.Name,
                     apartment.CoverImgUrl,
                     apartment.Location,
-                    apartment.Price
+                    apartment.Price,
+                    apartment.IsDeleted
                 ))
                 .Take(limit)
                 .ToListAsync();

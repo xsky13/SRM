@@ -34,7 +34,7 @@ namespace SRM.Api.Services
                     AppUserId = r.AppUserId,
                     AppUser = r.AppUser.ToListingDto(),
                     Payments = r.Payments.Select(p => p.ToDto()).ToList(),
-                    Apartment = new ApartmentListingDto(r.ApartmentId, r.Apartment.Name, r.Apartment.CoverImgUrl, r.Apartment.Location, r.Apartment.Price)
+                    Apartment = new ApartmentListingDto(r.ApartmentId, r.Apartment.Name, r.Apartment.CoverImgUrl, r.Apartment.Location, r.Apartment.Price, r.IsDeleted)
                 })
                 .FirstOrDefaultAsync();
 
