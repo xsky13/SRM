@@ -5,6 +5,7 @@
         string Name,
         string CoverImgUrl,
         string Location,
-        decimal Price
+        decimal Price,
+        bool? IsDeleted
     );
 }

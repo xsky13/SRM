@@ -24,7 +24,8 @@ namespace SRM.Api.Models.Entities
                 Name,
                 CoverImgUrl,
                 Location,
-                Price
+                Price,
+                IsDeleted
             );
         }
 
