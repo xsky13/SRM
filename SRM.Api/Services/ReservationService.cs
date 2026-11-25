@@ -121,49 +121,57 @@ namespace SRM.Api.Services
             return Result<PagedResponse<ReservationListingDto>>.Ok(response);
         }
 
-        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, PaginationParameters filter)
+        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, UserReservationsQueryParameters filter)
         {
             var today = DateTime.UtcNow.Date;
             var query = _db.Reservations
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= today)
-                .Select(r => new ReservationListingDto
-                {
-                    Id = r.Id,
-                    CheckInDate = r.CheckInDate,
-                    CheckOutDate = r.CheckOutDate,
-                    ApartmentId = r.ApartmentId,
-                    ReservationState = r.State,
-                    ApartmentName = r.Apartment.Name,
-                    IsDeleted = r.IsDeleted || r.Apartment.IsDeleted
-                })
-                .OrderByDescending(r => r.CheckInDate);
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= today);
 
-            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            if (filter.State != 0 && filter.State != ReservationState.PaymentPending)
+                query = query.Where(r => r.State == filter.State);
+
+
+            var dtoQuery= query.Select(r => new ReservationListingDto
+            {
+                Id = r.Id,
+                CheckInDate = r.CheckInDate,
+                CheckOutDate = r.CheckOutDate,
+                ApartmentId = r.ApartmentId,
+                ReservationState = r.State,
+                ApartmentName = r.Apartment.Name,
+                IsDeleted = r.IsDeleted || r.Apartment.IsDeleted
+            }).OrderByDescending(r => r.CheckInDate).ThenBy(r => r.Id);
+
+            var response = await dtoQuery.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
             return Result<PagedResponse<ReservationListingDto>>.Ok(response);
         }
 
-        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, PaginationParameters filter)
+        public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, UserReservationsQueryParameters filter)
         {
             var today = DateTime.UtcNow.Date;
             var query = _db.Reservations
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date <= today)
-                .Select(r => new ReservationListingDto
-                {
-                    Id = r.Id,
-                    CheckInDate = r.CheckInDate,
-                    CheckOutDate = r.CheckOutDate,
-                    ApartmentId = r.ApartmentId,
-                    ReservationState = r.State,
-                    ApartmentName = r.Apartment.Name,
-                    IsDeleted = r.IsDeleted || r.Apartment.IsDeleted
-                })
-                .OrderByDescending(r => r.CheckInDate);
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date <= today);
 
-            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            if (filter.State != 0 && filter.State != ReservationState.PaymentPending)
+                query = query.Where(r => r.State == filter.State);
+
+            var dtoQuery = query.Select(r => new ReservationListingDto
+            {
+                Id = r.Id,
+                CheckInDate = r.CheckInDate,
+                CheckOutDate = r.CheckOutDate,
+                ApartmentId = r.ApartmentId,
+                ReservationState = r.State,
+                ApartmentName = r.Apartment.Name,
+                IsDeleted = r.IsDeleted || r.Apartment.IsDeleted
+            }).OrderByDescending(r => r.CheckInDate).ThenBy(r => r.Id);
+
+
+            var response = await dtoQuery.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
             return Result<PagedResponse<ReservationListingDto>>.Ok(response);
         }
 

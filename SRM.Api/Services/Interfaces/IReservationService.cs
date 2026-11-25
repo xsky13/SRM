@@ -12,8 +12,8 @@ namespace SRM.Api.Services.Interfaces
 
 
         public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserId(Guid userId, PaginationParameters filter);
-        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, PaginationParameters filter);
-        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, PaginationParameters filter);
+        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, UserReservationsQueryParameters filter);
+        public Task<Result<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, UserReservationsQueryParameters filter);
 
 
         public Task<Result<PagedResponse<ReservationDetailDto>>> GetAllForAdmin(AdminReservationParameterQuery filter);

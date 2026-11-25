@@ -45,14 +45,14 @@ namespace SRM.Api.Controllers
         }
 
         [HttpGet("user/{userId}/future")]
-        public async Task<ActionResult<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, [FromQuery] PaginationParameters filter)
+        public async Task<ActionResult<PagedResponse<ReservationListingDto>>> GetByUserIdFuture(Guid userId, [FromQuery] UserReservationsQueryParameters filter)
         {
             var response = await _reservationService.GetByUserIdFuture(userId, filter);
             return response.ToActionResult();
         }
 
         [HttpGet("user/{userId}/past")]
-        public async Task<ActionResult<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, [FromQuery] PaginationParameters filter)
+        public async Task<ActionResult<PagedResponse<ReservationListingDto>>> GetByUserIdPast(Guid userId, [FromQuery] UserReservationsQueryParameters filter)
         {
             var response = await _reservationService.GetByUserIdPast(userId, filter);
             return response.ToActionResult();
