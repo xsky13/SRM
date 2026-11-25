@@ -13,5 +13,7 @@ namespace SRM.Api.Models.Dto.Reservation
         public Guid ApartmentId { get; set; } //
         public string ApartmentName { get; set; }
         public ReservationState ReservationState { get; set; }
+
+        public bool? IsDeleted { get; set; }
     }
 }

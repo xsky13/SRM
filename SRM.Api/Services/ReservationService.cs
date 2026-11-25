@@ -100,9 +100,12 @@ namespace SRM.Api.Services
 
         public async Task<Result<PagedResponse<ReservationListingDto>>> GetByUserId(Guid userId, PaginationParameters filter)
         {
+            var today = DateTime.UtcNow.Date;
+
             var query = _db.Reservations
                 .AsNoTracking()
-                .Where(r => r.AppUserId == userId && !r.IsDeleted && !r.Apartment.IsDeleted)
+                // por alguna razon, el .ToPagedResponseAsync cuenta entidades eliminadas, asi que hay que excluirlas manualmente
+                .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= today && !r.IsDeleted && !r.Apartment.IsDeleted)
                 .Select(r => new ReservationListingDto
                 {
                     Id = r.Id,
@@ -123,6 +126,7 @@ namespace SRM.Api.Services
             var today = DateTime.UtcNow.Date;
             var query = _db.Reservations
                 .AsNoTracking()
+                .IgnoreQueryFilters()
                 .Where(r => r.AppUserId == userId && r.CheckOutDate.Date >= today)
                 .Select(r => new ReservationListingDto
                 {
@@ -131,7 +135,8 @@ namespace SRM.Api.Services
                     CheckOutDate = r.CheckOutDate,
                     ApartmentId = r.ApartmentId,
                     ReservationState = r.State,
-                    ApartmentName = r.Apartment.Name
+                    ApartmentName = r.Apartment.Name,
+                    IsDeleted = r.IsDeleted || r.Apartment.IsDeleted
                 })
                 .OrderByDescending(r => r.CheckInDate);
 
@@ -144,6 +149,7 @@ namespace SRM.Api.Services
             var today = DateTime.UtcNow.Date;
             var query = _db.Reservations
                 .AsNoTracking()
+                .IgnoreQueryFilters()
                 .Where(r => r.AppUserId == userId && r.CheckOutDate.Date <= today)
                 .Select(r => new ReservationListingDto
                 {
@@ -152,7 +158,8 @@ namespace SRM.Api.Services
                     CheckOutDate = r.CheckOutDate,
                     ApartmentId = r.ApartmentId,
                     ReservationState = r.State,
-                    ApartmentName = r.Apartment.Name
+                    ApartmentName = r.Apartment.Name,
+                    IsDeleted = r.IsDeleted || r.Apartment.IsDeleted
                 })
                 .OrderByDescending(r => r.CheckInDate);
 
