@@ -13,5 +13,6 @@ namespace SRM.Api.Models.Dto.Reservation
     {
         public FilterType DateFilter { get; set; }
         public ReservationState State { get; set; }
+        public bool IncludeDeleted { get; set; }
     }
 }

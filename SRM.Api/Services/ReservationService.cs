@@ -183,8 +183,7 @@ namespace SRM.Api.Services
             var today = DateTime.UtcNow.Date; // fuera de la query: viaja como parametro
 
             IQueryable<Reservation> query = _db.Reservations
-                .AsNoTracking()
-                .IgnoreQueryFilters();
+                .AsNoTracking();
 
             query = filter.DateFilter switch
             {
@@ -195,6 +194,10 @@ namespace SRM.Api.Services
 
             if (filter.State != 0)
                 query = query.Where(r => r.State == filter.State);
+
+            if (filter.IncludeDeleted)
+                query = query.IgnoreQueryFilters();
+            else query = query.Where(r => !r.IsDeleted && !r.Apartment.IsDeleted && !r.AppUser.IsDeleted);
 
             var response = await query
                 .Include(r => r.Apartment)
@@ -634,6 +637,10 @@ namespace SRM.Api.Services
             if (filter.State != 0)
                 query = query.Where(r => r.State == filter.State);
 
+            if (filter.IncludeDeleted)
+                query = query.IgnoreQueryFilters();
+            else query = query.Where(r => !r.IsDeleted && !r.Apartment.IsDeleted && !r.AppUser.IsDeleted);
+
             var response = await query
                 .Include(r => r.Apartment)
                 .Include(r => r.AppUser)
@@ -675,6 +682,10 @@ namespace SRM.Api.Services
 
             if (filter.State != 0)
                 query = query.Where(r => r.State == filter.State);
+
+            if (filter.IncludeDeleted)
+                query = query.IgnoreQueryFilters();
+            else query = query.Where(r => !r.IsDeleted && !r.Apartment.IsDeleted && !r.AppUser.IsDeleted);
 
             var response = await query
                 .Include(r => r.Apartment)
