@@ -132,7 +132,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet("admin/apartment/{apartmentId}")]
-        public async Task<ActionResult<PagedResponse<ReservationDetailDto>>> GetReservationsByAppartmentIdForAdmin([FromQuery] PaginationParameters filter, Guid apartmentId)
+        public async Task<ActionResult<PagedResponse<ReservationDetailDto>>> GetReservationsByAppartmentIdForAdmin([FromQuery] AdminReservationParameterQuery filter, Guid apartmentId)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();
@@ -143,7 +143,7 @@ namespace SRM.Api.Controllers
 
         [Authorize]
         [HttpGet("admin/user/{userId}")]
-        public async Task<ActionResult<PagedResponse<ReservationDetailDto>>> GetReservationsByUserIdForAdmin([FromQuery] PaginationParameters filter, Guid userId)
+        public async Task<ActionResult<PagedResponse<ReservationDetailDto>>> GetReservationsByUserIdForAdmin([FromQuery] AdminReservationParameterQuery filter, Guid userId)
         {
             if (!User.IsInRole(UserType.Admin.ToString()))
                 return Forbid();

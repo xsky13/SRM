@@ -194,11 +194,7 @@ namespace SRM.Api.Services
             };
 
             if (filter.State != 0)
-                query = filter.State switch
-                {
-                    ReservationState.PaymentPending => query,
-                    _ => query.Where(r => r.State == filter.State)
-                };
+                query = query.Where(r => r.State == filter.State);
 
             var response = await query
                 .Include(r => r.Apartment)
@@ -620,34 +616,74 @@ namespace SRM.Api.Services
             return Result<ReservationDetailDto>.Ok(reservation.ToReservationDetailDto());
         }
 
-        public async Task<Result<PagedResponse<ReservationDetailDto>>> ListReservationsByApartmentAdmin(Guid apartmentId, PaginationParameters filter)
+        public async Task<Result<PagedResponse<ReservationDetailDto>>> ListReservationsByApartmentAdmin(Guid apartmentId, AdminReservationParameterQuery filter)
         {
-            var query = _db.Reservations
-                .Include(r => r.AppUser)
-                .Include(r => r.Apartment)
-                .Include(r => r.Payments)
-                .AsNoTracking()
-                .IgnoreQueryFilters()
+            var today = DateTime.UtcNow.Date;
+            IQueryable<Reservation> query = _db.Reservations
                 .Where(r => r.ApartmentId == apartmentId)
-                .Select(r => r.ToReservationDetailDto());
+                .AsNoTracking()
+                .IgnoreQueryFilters();
 
-            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            query = filter.DateFilter switch
+            {
+                FilterType.Future => query.Where(r => r.CheckOutDate >= today),
+                FilterType.Past => query.Where(r => r.CheckOutDate < today),
+                _ => query
+            };
+
+            if (filter.State != 0)
+                query = query.Where(r => r.State == filter.State);
+
+            var response = await query
+                .Include(r => r.Apartment)
+                .Include(r => r.AppUser)
+                .Include(r => r.Payments)
+                .OrderByDescending(r => r.CheckInDate).ThenBy(r => r.Id)
+                .IgnoreQueryFilters()
+                .Select(r => r.ToReservationDetailDto())
+                .ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+
 
             return Result<PagedResponse<ReservationDetailDto>>.Ok(response);
         }
 
-        public async Task<Result<PagedResponse<ReservationDetailDto>>> ListReservationsByUserAdmin(Guid userId, PaginationParameters filter)
+        public async Task<Result<PagedResponse<ReservationDetailDto>>> ListReservationsByUserAdmin(Guid userId, AdminReservationParameterQuery filter)
         {
-            var query = _db.Reservations
-                .Include(r => r.AppUser)
-                .Include(r => r.Apartment)
-                .Include(r => r.Payments)
-                .AsNoTracking()
-                .IgnoreQueryFilters()
-                .Where(r => r.AppUserId == userId)
-                .Select(r => r.ToReservationDetailDto());
+            //var query = _db.Reservations
+            //    .Include(r => r.AppUser)
+            //    .Include(r => r.Apartment)
+            //    .Include(r => r.Payments)
+            //    .AsNoTracking()
+            //    .IgnoreQueryFilters()
+            //    .Where(r => r.AppUserId == userId)
+            //    .Select(r => r.ToReservationDetailDto());
 
-            var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+            //var response = await query.ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
+
+            var today = DateTime.UtcNow.Date;
+            IQueryable<Reservation> query = _db.Reservations
+                .Where(r => r.AppUserId == userId)
+                .AsNoTracking()
+                .IgnoreQueryFilters();
+
+            query = filter.DateFilter switch
+            {
+                FilterType.Future => query.Where(r => r.CheckOutDate >= today),
+                FilterType.Past => query.Where(r => r.CheckOutDate < today),
+                _ => query
+            };
+
+            if (filter.State != 0)
+                query = query.Where(r => r.State == filter.State);
+
+            var response = await query
+                .Include(r => r.Apartment)
+                .Include(r => r.AppUser)
+                .Include(r => r.Payments)
+                .OrderByDescending(r => r.CheckInDate).ThenBy(r => r.Id)
+                .IgnoreQueryFilters()
+                .Select(r => r.ToReservationDetailDto())
+                .ToPagedResponseAsync(filter.PageNumber, filter.PageSize);
 
             return Result<PagedResponse<ReservationDetailDto>>.Ok(response);
         }
