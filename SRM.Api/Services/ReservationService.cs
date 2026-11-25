@@ -193,6 +193,13 @@ namespace SRM.Api.Services
                 _ => query
             };
 
+            if (filter.State != 0)
+                query = filter.State switch
+                {
+                    ReservationState.PaymentPending => query,
+                    _ => query.Where(r => r.State == filter.State)
+                };
+
             var response = await query
                 .Include(r => r.Apartment)
                 .Include(r => r.AppUser)
